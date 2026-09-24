@@ -98,7 +98,7 @@
 
     <button
       type="button"
-      class="inline-flex items-center gap-2 rounded-xl bg-[#ea4335] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#d93025] active:scale-95"
+      class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95"
       onclick={() => (showTopUpModal = true)}
     >
       <Zap class="h-4 w-4" />
@@ -133,7 +133,7 @@
       <!-- Meter bar -->
       <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
         <div
-          class="h-full bg-gradient-to-r from-[#ea4335] to-amber-500 transition-all duration-500 rounded-full"
+          class="h-full bg-gradient-to-r from-brand-500 to-amber-500 transition-all duration-500 rounded-full"
           style="width: {billingData.percentUsed}%"
         ></div>
       </div>
@@ -169,8 +169,8 @@
     </div>
 
     <!-- Growth (Active) -->
-    <div class="relative rounded-2xl border-2 border-[#ea4335]/80 bg-white p-5.5 shadow-[0_4px_24px_rgba(234,67,53,0.12)] dark:bg-slate-900/90">
-      <div class="absolute -top-3 right-4 rounded-full bg-[#ea4335] px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider shadow-xs">
+    <div class="relative rounded-2xl border-2 border-brand-500/80 bg-white p-5.5 shadow-[0_4px_24px_rgba(79,70,229,0.12)] dark:bg-slate-900/90">
+      <div class="absolute -top-3 right-4 rounded-full bg-brand-500 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider shadow-xs">
         Paket Aktif
       </div>
       <h3 class="text-base font-bold text-slate-900 dark:text-white">Growth</h3>
@@ -185,7 +185,7 @@
         <li class="flex items-center gap-2"><Check class="h-4 w-4 text-emerald-500" /> Full Auto Mode + Throttling</li>
         <li class="flex items-center gap-2"><Check class="h-4 w-4 text-emerald-500" /> Export Laporan CSV</li>
       </ul>
-      <div class="mt-6 flex items-center justify-center rounded-xl bg-[#ea4335]/10 py-2.5 text-xs font-bold text-[#b3261e] dark:bg-[#ea4335]/20 dark:text-red-300 border border-[#ea4335]/20">
+      <div class="mt-6 flex items-center justify-center rounded-xl bg-brand-500/10 py-2.5 text-xs font-bold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300 border border-brand-500/20">
         Sedang Berlangganan
       </div>
     </div>
@@ -268,21 +268,21 @@
         <div class="grid grid-cols-2 gap-3">
           <button
             type="button"
-            class="rounded-xl border p-4 text-left transition {selectedUnits === 500 ? 'border-[#ea4335] bg-[#ea4335]/5 dark:bg-[#ea4335]/15' : 'border-slate-200 dark:border-slate-700'}"
+            class="rounded-xl border p-4 text-left transition {selectedUnits === 500 ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-500/15' : 'border-slate-200 dark:border-slate-700'}"
             onclick={() => (selectedUnits = 500)}
           >
             <p class="text-sm font-bold text-slate-900 dark:text-white font-mono">+500 Units</p>
-            <p class="mt-1 text-xs text-[#ea4335] font-semibold font-mono">Rp 150.000</p>
+            <p class="mt-1 text-xs text-brand-500 font-semibold font-mono">Rp 150.000</p>
             <span class="text-[10px] text-slate-400">Rp 300 / komentar</span>
           </button>
 
           <button
             type="button"
-            class="rounded-xl border p-4 text-left transition {selectedUnits === 2000 ? 'border-[#ea4335] bg-[#ea4335]/5 dark:bg-[#ea4335]/15' : 'border-slate-200 dark:border-slate-700'}"
+            class="rounded-xl border p-4 text-left transition {selectedUnits === 2000 ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-500/15' : 'border-slate-200 dark:border-slate-700'}"
             onclick={() => (selectedUnits = 2000)}
           >
             <p class="text-sm font-bold text-slate-900 dark:text-white font-mono">+2.000 Units</p>
-            <p class="mt-1 text-xs text-[#ea4335] font-semibold font-mono">Rp 500.000</p>
+            <p class="mt-1 text-xs text-brand-500 font-semibold font-mono">Rp 500.000</p>
             <span class="text-[10px] text-slate-400">Hemat 17%</span>
           </button>
         </div>
@@ -298,7 +298,7 @@
         </button>
         <button
           type="button"
-          class="rounded-xl bg-[#ea4335] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#d93025] transition active:scale-98 disabled:opacity-50"
+          class="rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 transition active:scale-98 disabled:opacity-50"
           onclick={handleTopUpCheckout}
           disabled={isCheckingOut}
         >

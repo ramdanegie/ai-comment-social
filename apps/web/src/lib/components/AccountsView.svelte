@@ -17,6 +17,7 @@
   import { api } from '../api';
   import type { SocialAccount, Platform } from '../types';
   import { toast } from '$lib/toast';
+  import { timeAgo } from '$lib/format';
 
   let {
     workspaceSlug = 'maujahit',
@@ -27,6 +28,22 @@
   } = $props();
 
   let accounts: SocialAccount[] = $state([]);
+  let syncingId = $state<string | null>(null);
+
+  async function handleSync(acc: SocialAccount) {
+    syncingId = acc.id;
+    try {
+      await api.syncAccount(workspaceSlug, acc.id);
+      toast.success(
+        isLangEn ? 'New comments will appear in a moment.' : 'Komentar baru akan muncul sebentar lagi.',
+        isLangEn ? 'Sync started' : 'Sinkronisasi dimulai'
+      );
+    } catch {
+      toast.error(isLangEn ? 'Could not start sync.' : 'Gagal memulai sinkronisasi.');
+    } finally {
+      syncingId = null;
+    }
+  }
   let loading: boolean = $state(true);
   let isConnecting: boolean = $state(false);
   let showConnectModal: boolean = $state(false);
@@ -116,7 +133,7 @@
 
     <button
       type="button"
-      class="inline-flex items-center gap-2 rounded-xl bg-[#ea4335] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#d93025] active:scale-95"
+      class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95"
       onclick={() => (showConnectModal = true)}
     >
       <Plus class="h-4 w-4" />
@@ -164,13 +181,13 @@
                 <div class="mt-1 flex items-center gap-1.5 text-xs font-medium">
                   {#if acc.status === 'connected'}
                     <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
-                    <span class="text-emerald-700 dark:text-emerald-400">Token Aktif & Sinkron</span>
+                    <span class="text-emerald-700 dark:text-emerald-400">{isLangEn ? 'Connected' : 'Terhubung'}</span>
                   {:else if acc.status === 'pending_approval'}
                     <span class="h-2 w-2 rounded-full bg-amber-500"></span>
                     <span class="text-amber-700 dark:text-amber-400">Fase 2 (Menunggu Approval TikTok)</span>
                   {:else}
-                    <span class="h-2 w-2 rounded-full bg-[#ea4335]"></span>
-                    <span class="text-[#ea4335] dark:text-red-400">Token Kedaluwarsa</span>
+                    <span class="h-2 w-2 rounded-full bg-rose-500"></span>
+                    <span class="text-rose-600 dark:text-rose-400">{isLangEn ? 'Token expired — reconnect' : 'Token kedaluwarsa — hubungkan ulang'}</span>
                   {/if}
                 </div>
               </div>
@@ -179,7 +196,7 @@
             <!-- Disconnect / Reconnect menu -->
             <button
               type="button"
-              class="rounded-lg p-1.5 text-slate-400 hover:bg-[#ea4335]/10 hover:text-[#ea4335] transition-colors"
+              class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
               onclick={() => handleDisconnectClick(acc)}
               title="Putus koneksi akun"
             >
@@ -187,16 +204,33 @@
             </button>
           </div>
 
-          <!-- Permissions & Webhook Status -->
-          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-            <div class="flex flex-wrap items-center justify-between text-xs text-slate-500">
-              <div class="flex items-center gap-1.5">
-                <Shield class="h-3.5 w-3.5 text-emerald-600" />
-                <span>Webhook Subscribed (IG Comments & Feed)</span>
-              </div>
-              <span class="font-mono text-[11px]">
-                Mode: <strong class="uppercase text-slate-800 dark:text-slate-200">{acc.policy?.mode || 'shadow'}</strong>
+          <!-- Sync status: dev mode has no comment webhooks, so comments arrive via polling -->
+          <div class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span class="flex items-center gap-1.5">
+                <RefreshCw class="h-3.5 w-3.5" />
+                {#if acc.lastSyncedAt}
+                  {isLangEn ? 'Synced' : 'Sinkron'} {timeAgo(acc.lastSyncedAt, isLangEn)}
+                {:else}
+                  {isLangEn ? 'Never synced' : 'Belum pernah sinkron'}
+                {/if}
               </span>
+              <div class="flex items-center gap-2">
+                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium capitalize text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {acc.policy?.mode || 'shadow'}
+                </span>
+                {#if acc.status === 'connected' && (acc.platform === 'instagram' || acc.platform === 'facebook')}
+                  <button
+                    type="button"
+                    onclick={() => handleSync(acc)}
+                    disabled={syncingId === acc.id}
+                    class="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-brand-600 transition hover:bg-brand-50 disabled:opacity-50 dark:text-brand-400 dark:hover:bg-brand-500/10"
+                  >
+                    <RefreshCw class="h-3.5 w-3.5 {syncingId === acc.id ? 'animate-spin' : ''}" />
+                    {isLangEn ? 'Sync now' : 'Sinkronkan'}
+                  </button>
+                {/if}
+              </div>
             </div>
           </div>
         </div>
@@ -221,7 +255,7 @@
             <button
               type="button"
               class="flex items-center justify-center gap-2 rounded-xl border p-2.5 font-semibold transition {newPlatform === 'instagram'
-                ? 'border-[#ea4335] bg-[#ea4335]/5 text-[#b3261e] dark:bg-[#ea4335]/15 dark:text-red-300'
+                ? 'border-brand-500 bg-brand-500/5 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'
                 : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}"
               onclick={() => (newPlatform = 'instagram')}
             >
@@ -231,7 +265,7 @@
             <button
               type="button"
               class="flex items-center justify-center gap-2 rounded-xl border p-2.5 font-semibold transition {newPlatform === 'facebook'
-                ? 'border-[#ea4335] bg-[#ea4335]/5 text-[#b3261e] dark:bg-[#ea4335]/15 dark:text-red-300'
+                ? 'border-brand-500 bg-brand-500/5 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'
                 : 'border-slate-200 text-slate-600 dark:border-slate-700 dark:text-slate-300'}"
               onclick={() => (newPlatform = 'facebook')}
             >
@@ -248,13 +282,13 @@
             type="text"
             placeholder="contoh: maujahit.official"
             bind:value={newUsername}
-            class="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-[#ea4335] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+            class="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
           />
         </div>
 
         <div class="rounded-xl bg-slate-50 p-3 text-[11px] text-slate-600 dark:bg-slate-800/60 dark:text-slate-400">
           <div class="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
-            <Key class="h-3.5 w-3.5 text-[#ea4335]" />
+            <Key class="h-3.5 w-3.5 text-brand-500" />
             <span>Keamanan Token:</span>
           </div>
           <p class="mt-0.5">Koneksi akun Anda dilindungi dengan enkripsi keamanan standar industri.</p>
@@ -271,7 +305,7 @@
         </button>
         <button
           type="button"
-          class="rounded-xl bg-[#ea4335] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#d93025] transition active:scale-98 disabled:opacity-50"
+          class="rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 transition active:scale-98 disabled:opacity-50"
           onclick={handleConnectAccount}
           disabled={isConnecting || !newUsername.trim()}
         >

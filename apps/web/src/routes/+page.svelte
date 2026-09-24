@@ -277,15 +277,15 @@
               {@const Icon = item.icon}
               <button
                 type="button"
-                class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition {activePage === item.id ? 'bg-red-500/10 text-[#d93025] font-bold dark:bg-red-500/20 dark:text-[#ea4335]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}"
+                class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 transition {activePage === item.id ? 'bg-brand-500/10 text-brand-600 font-bold dark:bg-brand-500/20 dark:text-brand-500' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}"
                 onclick={() => handleSelectPage(item.id)}
               >
                 <div class="flex items-center gap-3">
-                  <Icon class="h-4.5 w-4.5 {activePage === item.id ? 'text-[#ea4335]' : ''}" />
+                  <Icon class="h-4.5 w-4.5 {activePage === item.id ? 'text-brand-500' : ''}" />
                   <span>{item.label}</span>
                 </div>
                 {#if item.count && item.count > 0}
-                  <span class="rounded-full bg-[#ea4335]/15 px-2 py-0.5 text-xs font-bold text-[#d93025] dark:text-[#ea4335]">
+                  <span class="rounded-full bg-brand-500/15 px-2 py-0.5 text-xs font-bold text-brand-600 dark:text-brand-500">
                     {item.count}
                   </span>
                 {/if}
@@ -297,7 +297,7 @@
         <div class="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button
             type="button"
-            class="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white shadow-xs dark:bg-[#ea4335] hover:bg-slate-800 dark:hover:bg-[#d93025] transition-colors"
+            class="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white shadow-xs dark:bg-brand-500 hover:bg-slate-800 dark:hover:bg-brand-600 transition-colors"
             onclick={() => {
               isMobileMenuOpen = false;
               isOnboardingOpen = true;
@@ -308,7 +308,7 @@
 
           <button
             type="button"
-            class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200/80 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-red-50 hover:text-[#d93025] dark:border-slate-800 dark:text-slate-300 dark:hover:bg-red-950/40 dark:hover:text-[#ea4335] active:scale-98"
+            class="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200/80 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-rose-50 hover:text-rose-600 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-rose-950/40 dark:hover:text-rose-500 active:scale-98"
             onclick={() => {
               isMobileMenuOpen = false;
               isLogoutModalOpen = true;

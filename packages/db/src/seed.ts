@@ -305,8 +305,8 @@ export async function seed() {
       riskLabel: 'threat' as const,
       intent: 'complaint' as const,
       confidence: 0.96,
-      reason: 'Ancaman kekerasan fisik dan tuduhan penipuan berat. Eskalasi darurat.',
-      draftText: 'Mohon maaf atas ketidaknyamanannya kak. Kami sangat terbuka menyelesaikan kendala Anda secara baik-baik. Silakan hubungi hotline manajer kami di nomor resmi toko.'
+      reason: 'Ancaman kekerasan fisik dan tuduhan penipuan berat. Eskalasi darurat.'
+      // No AI draft for threat/hate (PRD §5.3)
     },
     {
       postId: post1.id,

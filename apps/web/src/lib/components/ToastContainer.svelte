@@ -20,7 +20,7 @@
       out:fade={{ duration: 150 }}
       class="pointer-events-auto flex items-start gap-3 rounded-2xl border bg-white/95 p-3.5 shadow-xl backdrop-blur-md transition-all dark:bg-slate-900/95 {
         item.type === 'error'
-          ? 'border-[#ea4335]/30 shadow-[#ea4335]/10'
+          ? 'border-rose-500/30 shadow-rose-500/10'
           : item.type === 'success'
           ? 'border-[#1e8e3e]/30 shadow-[#1e8e3e]/10'
           : item.type === 'warning'
@@ -33,7 +33,7 @@
       <div
         class="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl {
           item.type === 'error'
-            ? 'bg-[#ea4335]/12 text-[#ea4335]'
+            ? 'bg-rose-500/12 text-rose-500'
             : item.type === 'success'
             ? 'bg-[#1e8e3e]/12 text-[#1e8e3e]'
             : item.type === 'warning'

@@ -36,14 +36,14 @@
     <button
       type="button"
       class="relative flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors {isActive
-        ? 'text-[#ea4335] dark:text-red-400 font-semibold'
+        ? 'text-brand-500 dark:text-brand-400 font-semibold'
         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}"
       onclick={() => onSelectPage(item.id)}
     >
       <div class="relative">
         <Icon class="h-5 w-5" />
         {#if item.badgeKey === 'review' && pendingReviewCount > 0}
-          <span class="absolute -top-1.5 -right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#ea4335] text-[9px] font-bold text-white shadow-xs">
+          <span class="absolute -top-1.5 -right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-500 text-[9px] font-bold text-white shadow-xs">
             {pendingReviewCount}
           </span>
         {/if}

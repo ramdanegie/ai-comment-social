@@ -12,18 +12,18 @@
   } = $props();
 
   const sentimentStyles: Record<Sentiment, { bg: string; text: string; border: string; label: string }> = {
-    positive: { bg: 'bg-emerald-500/10 dark:bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-500/20 dark:border-emerald-500/30', label: 'Positive' },
-    neutral: { bg: 'bg-slate-500/10 dark:bg-slate-400/15', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-500/20 dark:border-slate-500/25', label: 'Neutral' },
-    negative: { bg: 'bg-amber-500/10 dark:bg-amber-500/15', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-500/20 dark:border-amber-500/30', label: 'Negative' }
+    positive: { bg: 'bg-emerald-500/10 dark:bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-500/20 dark:border-emerald-500/30', label: 'Positif' },
+    neutral: { bg: 'bg-slate-500/10 dark:bg-slate-400/15', text: 'text-slate-700 dark:text-slate-300', border: 'border-slate-500/20 dark:border-slate-500/25', label: 'Netral' },
+    negative: { bg: 'bg-amber-500/10 dark:bg-amber-500/15', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-500/20 dark:border-amber-500/30', label: 'Negatif' }
   };
 
   const riskStyles: Record<RiskLabel, { bg: string; text: string; border: string; label: string }> = {
-    none: { bg: 'bg-slate-500/10 dark:bg-slate-800/60', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-200/80 dark:border-slate-700/60', label: 'Aman (No Risk)' },
+    none: { bg: 'bg-slate-500/10 dark:bg-slate-800/60', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-200/80 dark:border-slate-700/60', label: 'Aman' },
     spam: { bg: 'bg-violet-500/10 dark:bg-violet-500/15', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-500/20 dark:border-violet-500/30', label: 'Spam' },
-    toxic: { bg: 'bg-[#ea4335]/10 dark:bg-[#ea4335]/20', text: 'text-[#b3261e] dark:text-red-300', border: 'border-[#ea4335]/20 dark:border-[#ea4335]/30', label: 'Toxic' },
-    hate: { bg: 'bg-[#ea4335]/15 dark:bg-[#ea4335]/25', text: 'text-[#b3261e] dark:text-red-200 font-semibold', border: 'border-[#ea4335]/30 dark:border-[#ea4335]/40', label: 'Hate Speech' },
-    threat: { bg: 'bg-[#ea4335]/20 dark:bg-[#ea4335]/30', text: 'text-[#b3261e] dark:text-red-200 font-bold', border: 'border-[#ea4335]/40 dark:border-[#ea4335]/50', label: 'Threat' },
-    sensitive: { bg: 'bg-orange-500/10 dark:bg-orange-500/15', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-500/20 dark:border-orange-500/30', label: 'Sensitive' }
+    toxic: { bg: 'bg-rose-500/10 dark:bg-rose-500/20', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-500/20 dark:border-rose-500/30', label: 'Kasar' },
+    hate: { bg: 'bg-rose-500/15 dark:bg-rose-500/25', text: 'text-rose-700 dark:text-rose-200 font-semibold', border: 'border-rose-500/30 dark:border-rose-500/40', label: 'SARA / Kebencian' },
+    threat: { bg: 'bg-rose-500/20 dark:bg-rose-500/30', text: 'text-rose-700 dark:text-rose-200 font-bold', border: 'border-rose-500/40 dark:border-rose-500/50', label: 'Ancaman' },
+    sensitive: { bg: 'bg-orange-500/10 dark:bg-orange-500/15', text: 'text-orange-700 dark:text-orange-300', border: 'border-orange-500/20 dark:border-orange-500/30', label: 'Sensitif' }
   };
 
   const intentLabels: Record<Intent, string> = {
@@ -37,14 +37,14 @@
   const statusStyles: Record<CommentStatus, { bg: string; text: string; border: string; label: string }> = {
     RECEIVED: { bg: 'bg-slate-500/10 dark:bg-slate-500/15', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-500/20 dark:border-slate-500/30', label: 'Diterima' },
     CLASSIFIED: { bg: 'bg-sky-500/10 dark:bg-sky-500/15', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-500/20 dark:border-sky-500/30', label: 'Terklasifikasi' },
-    AUTO_REPLY_QUEUED: { bg: 'bg-indigo-500/10 dark:bg-indigo-500/15', text: 'text-indigo-700 dark:text-indigo-300', border: 'border-indigo-500/20 dark:border-indigo-500/30', label: 'Antrean Auto-Reply' },
+    AUTO_REPLY_QUEUED: { bg: 'bg-sky-500/10 dark:bg-sky-500/15', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-500/20 dark:border-sky-500/30', label: 'Akan dibalas' },
     NEEDS_REVIEW: { bg: 'bg-amber-500/15 dark:bg-amber-500/20', text: 'text-amber-800 dark:text-amber-200 font-semibold', border: 'border-amber-500/30 dark:border-amber-500/40', label: 'Perlu Review' },
-    APPROVED: { bg: 'bg-emerald-500/10 dark:bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-500/20 dark:border-emerald-500/30', label: 'Disetujui' },
+    APPROVED: { bg: 'bg-sky-500/10 dark:bg-sky-500/15', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-500/20 dark:border-sky-500/30', label: 'Sedang dikirim' },
     REPLIED: { bg: 'bg-emerald-500/15 dark:bg-emerald-500/20', text: 'text-emerald-800 dark:text-emerald-200 font-medium', border: 'border-emerald-500/30 dark:border-emerald-500/40', label: 'Terbalas' },
     HIDDEN: { bg: 'bg-slate-500/10 dark:bg-slate-500/15', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-500/20 dark:border-slate-500/30', label: 'Disembunyikan' },
     DISMISSED: { bg: 'bg-slate-500/10 dark:bg-slate-500/15', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-500/20 dark:border-slate-500/30', label: 'Ditutup' },
     IGNORED: { bg: 'bg-slate-500/10 dark:bg-slate-500/15', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-500/20 dark:border-slate-500/30', label: 'Diabaikan' },
-    FAILED: { bg: 'bg-[#ea4335]/15 dark:bg-[#ea4335]/20', text: 'text-[#b3261e] dark:text-red-200', border: 'border-[#ea4335]/30 dark:border-[#ea4335]/40', label: 'Gagal Kirim' }
+    FAILED: { bg: 'bg-rose-500/15 dark:bg-rose-500/20', text: 'text-rose-700 dark:text-rose-200', border: 'border-rose-500/30 dark:border-rose-500/40', label: 'Gagal Kirim' }
   };
 
   let styling = $derived(
@@ -62,7 +62,7 @@
   class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 tracking-wide transition-all {styling.bg} {styling.text} {styling.border} {size === 'sm' ? 'text-[11px]' : 'text-xs'}"
 >
   {#if type === 'risk' && value !== 'none'}
-    <span class="inline-block h-1.5 w-1.5 rounded-full bg-[#ea4335] animate-pulse"></span>
+    <span class="inline-block h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse"></span>
   {:else if type === 'sentiment' && value === 'positive'}
     <span class="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
   {:else if type === 'status' && value === 'NEEDS_REVIEW'}

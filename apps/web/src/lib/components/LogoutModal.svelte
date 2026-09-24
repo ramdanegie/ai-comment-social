@@ -94,7 +94,7 @@
 
       <!-- Icon & Headline -->
       <div class="flex items-start gap-4">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-500/10 text-[#ea4335] dark:bg-red-500/20 dark:text-[#ea4335] border border-red-500/20">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 dark:text-rose-500 border border-rose-500/20">
           <LogOut class="h-6 w-6" />
         </div>
         <div class="min-w-0 flex-1 pr-6">
@@ -138,7 +138,7 @@
 
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-xl bg-[#ea4335] px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-[#ea4335]/30 transition hover:bg-[#d93025] active:scale-98 disabled:opacity-60"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-500/30 transition hover:bg-rose-600 active:scale-98 disabled:opacity-60"
           onclick={handleConfirmLogout}
           disabled={isLoggingOut}
         >

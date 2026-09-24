@@ -59,7 +59,7 @@
       <!-- Top Wizard Header -->
       <div class="flex items-center justify-between border-b pb-4 border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2">
-          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-[#ea4335] text-white">
+          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-white">
             <MessageSquareQuote class="h-4 w-4" />
           </div>
           <span class="text-sm font-bold text-slate-900 dark:text-white">
@@ -74,7 +74,7 @@
       <!-- Step Progress Bar -->
       <div class="mt-4 flex gap-1.5">
         {#each [1, 2, 3, 4] as s}
-          <div class="h-1 flex-1 rounded-full {s <= currentStep ? 'bg-[#ea4335]' : 'bg-slate-200 dark:bg-slate-800'}"></div>
+          <div class="h-1 flex-1 rounded-full {s <= currentStep ? 'bg-brand-500' : 'bg-slate-200 dark:bg-slate-800'}"></div>
         {/each}
       </div>
 
@@ -110,7 +110,7 @@
             <div class="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                class="flex flex-col items-center justify-center rounded-xl border p-4 transition {platformChoice === 'instagram' ? 'border-[#ea4335] bg-[#ea4335]/5 dark:bg-[#ea4335]/15 text-[#b3261e] dark:text-red-300' : 'border-slate-200 dark:border-slate-700'}"
+                class="flex flex-col items-center justify-center rounded-xl border p-4 transition {platformChoice === 'instagram' ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300' : 'border-slate-200 dark:border-slate-700'}"
                 onclick={() => (platformChoice = 'instagram')}
               >
                 <InstagramIcon class="h-6 w-6 text-pink-500 mb-1" />
@@ -119,7 +119,7 @@
               </button>
               <button
                 type="button"
-                class="flex flex-col items-center justify-center rounded-xl border p-4 transition {platformChoice === 'facebook' ? 'border-[#ea4335] bg-[#ea4335]/5 dark:bg-[#ea4335]/15 text-[#b3261e] dark:text-red-300' : 'border-slate-200 dark:border-slate-700'}"
+                class="flex flex-col items-center justify-center rounded-xl border p-4 transition {platformChoice === 'facebook' ? 'border-brand-500 bg-brand-500/5 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300' : 'border-slate-200 dark:border-slate-700'}"
                 onclick={() => (platformChoice = 'facebook')}
               >
                 <FacebookIcon class="h-6 w-6 text-blue-600 mb-1" />
@@ -163,7 +163,7 @@
               />
             </div>
             <div class="flex items-center gap-2">
-              <input type="checkbox" id="emojiOn" bind:checked={useEmoji} class="h-4 w-4 rounded text-[#ea4335] focus:ring-[#ea4335]" />
+              <input type="checkbox" id="emojiOn" bind:checked={useEmoji} class="h-4 w-4 rounded text-brand-500 focus:ring-brand-500" />
               <label for="emojiOn" class="font-semibold text-slate-700 dark:text-slate-300">
                 Gunakan gaya bahasa santai dan ramah
               </label>
@@ -202,7 +202,7 @@
 
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-xl bg-[#ea4335] px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#d93025] active:scale-95 transition"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-brand-500 px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 active:scale-95 transition"
           onclick={handleNext}
         >
           <span>{currentStep === 4 ? 'Selesaikan & Mulai' : 'Lanjutkan'}</span>

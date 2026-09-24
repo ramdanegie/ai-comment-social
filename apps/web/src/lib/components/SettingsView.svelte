@@ -94,7 +94,7 @@
 
     <button
       type="button"
-      class="inline-flex items-center gap-2 rounded-xl bg-[#ea4335] px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#d93025] active:scale-95"
+      class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95"
       onclick={() => (showInviteModal = true)}
     >
       <UserPlus class="h-4 w-4" />
@@ -126,7 +126,7 @@
               </td>
               <td class="py-3">
                 <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider {m.role === 'owner'
-                  ? 'bg-[#ea4335]/10 text-[#b3261e] dark:bg-[#ea4335]/20 dark:text-red-300 border border-[#ea4335]/20'
+                  ? 'bg-brand-500/10 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300 border border-brand-500/20'
                   : m.role === 'admin'
                     ? 'bg-[#1a73e8]/10 text-[#1a73e8] dark:bg-[#1a73e8]/20 dark:text-blue-300 border border-[#1a73e8]/20'
                     : 'bg-slate-500/10 text-slate-600 dark:bg-slate-500/20 dark:text-slate-400 border border-slate-500/20'}">
@@ -233,7 +233,7 @@
         </button>
         <button
           type="button"
-          class="rounded-xl bg-[#ea4335] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#d93025] transition active:scale-98"
+          class="rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 transition active:scale-98"
           onclick={handleInvite}
         >
           Kirim Undangan

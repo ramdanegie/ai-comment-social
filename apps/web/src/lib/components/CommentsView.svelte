@@ -127,7 +127,7 @@
         <button
           type="button"
           class="rounded-xl px-3 py-1.5 text-xs font-semibold transition-all {activeTab === tab.id
-            ? 'bg-[#ea4335]/12 text-[#b3261e] dark:bg-[#ea4335]/20 dark:text-red-300 shadow-2xs border border-[#ea4335]/25'
+            ? 'bg-brand-500/12 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300 shadow-2xs border border-brand-500/25'
             : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-200'}"
           onclick={() => handleTabChange(tab.id)}
         >
@@ -146,7 +146,7 @@
           placeholder={isLangEn ? 'Search comment text or @author...' : 'Cari teks komentar atau @nama akun...'}
           bind:value={searchInput}
           onkeydown={(e) => e.key === 'Enter' && handleFilterSubmit()}
-          class="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-3 text-xs text-slate-900 transition focus:border-[#ea4335] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+          class="h-9 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
         />
       </div>
 
@@ -154,7 +154,7 @@
       <select
         bind:value={selectedPlatform}
         onchange={loadData}
-        class="h-9 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-700 transition focus:border-[#ea4335] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        class="h-9 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-700 transition focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
       >
         <option value="all">Semua Platform</option>
         <option value="instagram">Instagram</option>
@@ -165,7 +165,7 @@
       <select
         bind:value={selectedSentiment}
         onchange={loadData}
-        class="h-9 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-700 transition focus:border-[#ea4335] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        class="h-9 rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-xs font-medium text-slate-700 transition focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
       >
         <option value="all">Semua Sentimen</option>
         <option value="positive">Positif</option>
@@ -175,7 +175,7 @@
 
       <button
         type="button"
-        class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white transition hover:bg-slate-800 dark:bg-[#ea4335] dark:hover:bg-[#d93025]"
+        class="inline-flex h-9 items-center justify-center rounded-xl bg-slate-900 px-4 text-xs font-semibold text-white transition hover:bg-slate-800 dark:bg-brand-500 dark:hover:bg-brand-600"
         onclick={loadData}
       >
         Filter
@@ -274,7 +274,7 @@
                 </button>
                 <button
                   type="button"
-                  class="rounded-lg p-1.5 text-[#ea4335] hover:bg-[#ea4335]/10 dark:text-red-400 dark:hover:bg-[#ea4335]/20 transition-colors"
+                  class="rounded-lg p-1.5 text-brand-500 hover:bg-brand-500/10 dark:text-brand-400 dark:hover:bg-brand-500/20 transition-colors"
                   onclick={() => openCorrectionModal(c)}
                   title="Koreksi Label"
                 >
@@ -335,7 +335,7 @@
             </button>
             <button
               type="button"
-              class="rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-[#ea4335]"
+              class="rounded-lg bg-slate-900 px-3 py-1 text-xs font-semibold text-white dark:bg-brand-500"
               onclick={() => (activeDetailComment = c)}
             >
               Detail
@@ -491,7 +491,7 @@
         </button>
         <button
           type="button"
-          class="rounded-xl bg-[#ea4335] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-[#d93025] transition active:scale-98 disabled:opacity-50"
+          class="rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 transition active:scale-98 disabled:opacity-50"
           onclick={saveLabelCorrection}
           disabled={isSavingLabel}
         >

@@ -161,19 +161,19 @@
           <button
             type="button"
             class="group flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-all {isActive
-              ? 'bg-red-500/10 text-[#d93025] shadow-2xs dark:bg-red-500/15 dark:text-[#ea4335] border border-red-500/20'
+              ? 'bg-brand-500/10 text-brand-600 shadow-2xs dark:bg-brand-500/15 dark:text-brand-500 border border-brand-500/20'
               : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'}"
             onclick={() => onSelectPage(item.id)}
           >
             <div class="flex items-center gap-3 min-w-0">
               <Icon
-                class="h-4 w-4 shrink-0 transition-colors {isActive ? 'text-[#ea4335] dark:text-[#ea4335]' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}"
+                class="h-4 w-4 shrink-0 transition-colors {isActive ? 'text-brand-500 dark:text-brand-500' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}"
               />
               <span class="truncate">{label}</span>
             </div>
 
             {#if item.badgeKey === 'review' && pendingReviewCount > 0}
-              <span class="flex h-4.5 items-center justify-center rounded-full bg-[#ea4335]/15 px-1.5 text-[10px] font-bold text-[#d93025] dark:text-[#ea4335]">
+              <span class="flex h-4.5 items-center justify-center rounded-full bg-brand-500/15 px-1.5 text-[10px] font-bold text-brand-600 dark:text-brand-500">
                 {pendingReviewCount}
               </span>
             {/if}
@@ -183,19 +183,19 @@
           <button
             type="button"
             class="relative flex h-10 w-full items-center justify-center rounded-xl text-xs font-semibold transition-all {isActive
-              ? 'bg-red-500/10 text-[#d93025] shadow-2xs dark:bg-red-500/15 dark:text-[#ea4335] border border-red-500/20'
+              ? 'bg-brand-500/10 text-brand-600 shadow-2xs dark:bg-brand-500/15 dark:text-brand-500 border border-brand-500/20'
               : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'}"
             onclick={() => onSelectPage(item.id)}
             title={label}
             aria-label={label}
           >
             <Icon
-              class="h-4.5 w-4.5 shrink-0 transition-colors {isActive ? 'text-[#ea4335] dark:text-[#ea4335]' : 'text-slate-400 dark:text-slate-500'}"
+              class="h-4.5 w-4.5 shrink-0 transition-colors {isActive ? 'text-brand-500 dark:text-brand-500' : 'text-slate-400 dark:text-slate-500'}"
             />
 
             {#if item.badgeKey === 'review' && pendingReviewCount > 0}
               <span class="absolute top-2 right-2 flex h-2 w-2">
-                <span class="h-2 w-2 rounded-full bg-[#ea4335] ring-2 ring-white dark:ring-slate-950"></span>
+                <span class="h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950"></span>
               </span>
             {/if}
           </button>
@@ -219,7 +219,7 @@
           <span class="font-mono text-[11px] font-bold text-slate-800 dark:text-slate-200">1.420 / 5.450</span>
         </div>
         <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-          <div class="h-full rounded-full bg-[#ea4335] transition-all duration-300" style="width: 26%"></div>
+          <div class="h-full rounded-full bg-brand-500 transition-all duration-300" style="width: 26%"></div>
         </div>
         <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500">
           <span>26% Terpakai</span>
@@ -247,11 +247,11 @@
         <!-- Logout Button -->
         <button
           type="button"
-          class="group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-red-50 hover:text-[#d93025] dark:text-slate-400 dark:hover:bg-red-950/40 dark:hover:text-[#ea4335] active:scale-98"
+          class="group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-500 active:scale-98"
           onclick={handleLogout}
           title={isLangEn ? 'Log out of your account' : 'Keluar dari akun Anda'}
         >
-          <LogOut class="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-[#ea4335] dark:group-hover:text-[#ea4335]" />
+          <LogOut class="h-4 w-4 shrink-0 text-slate-400 transition-colors group-hover:text-rose-500 dark:group-hover:text-rose-500" />
           <span>{isLangEn ? 'Log Out' : 'Keluar Akun'}</span>
         </button>
       </div>
@@ -265,7 +265,7 @@
         aria-label="Kuota AI"
       >
         <div class="relative">
-          <CreditCard class="h-4.5 w-4.5 text-[#ea4335] dark:text-[#ea4335]" />
+          <CreditCard class="h-4.5 w-4.5 text-brand-500 dark:text-brand-500" />
           <span class="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-slate-900"></span>
         </div>
       </button>
@@ -281,12 +281,12 @@
 
         <button
           type="button"
-          class="flex h-9 w-full items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-red-50 hover:text-[#d93025] dark:text-slate-400 dark:hover:bg-red-950/40 dark:hover:text-[#ea4335] active:scale-98"
+          class="flex h-9 w-full items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-500 active:scale-98"
           onclick={handleLogout}
           title={isLangEn ? 'Log Out' : 'Keluar Akun'}
           aria-label="Keluar Akun"
         >
-          <LogOut class="h-4.5 w-4.5 shrink-0 text-slate-400 hover:text-[#ea4335] dark:hover:text-[#ea4335]" />
+          <LogOut class="h-4.5 w-4.5 shrink-0 text-slate-400 hover:text-rose-500 dark:hover:text-rose-500" />
         </button>
       </div>
     {/if}

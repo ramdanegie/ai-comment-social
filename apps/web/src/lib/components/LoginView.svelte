@@ -122,7 +122,7 @@
 <div class="relative min-h-screen flex flex-col justify-center items-center overflow-x-hidden bg-[#f8fafc] px-4 py-8 text-slate-800 transition-colors duration-200 dark:bg-[#0b0f17] dark:text-slate-100 sm:px-6 lg:px-8">
   <!-- Ambient Moving Gradient Orbs in Background -->
   <div class="pointer-events-none fixed inset-0 overflow-hidden">
-    <div class="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-[#ea4335]/15 blur-3xl animate-pulse-glow"></div>
+    <div class="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-brand-500/15 blur-3xl animate-pulse-glow"></div>
     <div class="absolute top-1/3 -right-32 h-[28rem] w-[28rem] rounded-full bg-[#4285F4]/12 blur-3xl animate-float-reverse"></div>
     <div class="absolute -bottom-24 left-1/4 h-80 w-80 rounded-full bg-[#34A853]/10 blur-3xl animate-float-slow"></div>
     <div class="absolute top-2/3 right-1/4 h-64 w-64 rounded-full bg-[#FBBC05]/10 blur-3xl animate-pulse-glow"></div>
@@ -160,14 +160,14 @@
     <!-- Left Showcase: Interactive Moving Illustrations (SaaS Autopilot Flow) -->
     <div class="relative flex flex-col justify-center lg:col-span-7">
       <!-- Brand Pill -->
-      <div class="inline-flex items-center gap-2.5 rounded-full border border-red-500/20 bg-[#ea4335]/10 px-3.5 py-1.5 backdrop-blur-md w-fit shadow-2xs">
-        <span class="flex h-2 w-2 rounded-full bg-[#ea4335] animate-ping"></span>
-        <span class="text-xs font-bold text-[#ea4335] tracking-wide">Replyra AI • Auto-Moderation</span>
+      <div class="inline-flex items-center gap-2.5 rounded-full border border-brand-500/20 bg-brand-500/10 px-3.5 py-1.5 backdrop-blur-md w-fit shadow-2xs">
+        <span class="flex h-2 w-2 rounded-full bg-brand-500 animate-ping"></span>
+        <span class="text-xs font-bold text-brand-500 tracking-wide">Replyra AI • Auto-Moderation</span>
       </div>
 
       <!-- Main Headline (Crisp, High Impact, Non-cluttered) -->
       <h1 class="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl lg:text-5xl leading-tight">
-        Moderasi Komentar & Balasan AI <span class="text-[#ea4335]">Tanpa Ribet.</span>
+        Moderasi Komentar & Balasan AI <span class="text-brand-500">Tanpa Ribet.</span>
       </h1>
       <p class="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed">
         {isLangEn
@@ -179,7 +179,7 @@
       <div class="relative mt-8 h-96 w-full max-w-xl">
         <!-- Connecting Circuit / Flow Lines (SVG Backing) -->
         <svg class="absolute inset-0 h-full w-full pointer-events-none opacity-40 dark:opacity-30" viewBox="0 0 500 380">
-          <path d="M 120 70 C 220 70, 260 160, 360 160" fill="none" stroke="#ea4335" stroke-width="2" stroke-dasharray="6,6" class="animate-pulse" />
+          <path d="M 120 70 C 220 70, 260 160, 360 160" fill="none" stroke="#6366f1" stroke-width="2" stroke-dasharray="6,6" class="animate-pulse" />
           <path d="M 360 160 C 420 160, 420 280, 220 310" fill="none" stroke="#4285F4" stroke-width="2" stroke-dasharray="6,6" />
           <path d="M 80 260 C 140 260, 180 180, 360 160" fill="none" stroke="#34A853" stroke-width="1.5" stroke-dasharray="4,4" />
         </svg>
@@ -210,10 +210,10 @@
         </div>
 
         <!-- Floating Card 2: AI Generating Auto-Reply in Motion -->
-        <div class="absolute right-0 top-36 w-80 sm:w-88 rounded-2xl border border-red-500/30 bg-white/95 p-4 shadow-2xl backdrop-blur-md dark:border-red-500/30 dark:bg-slate-900/95 animate-float-reverse">
+        <div class="absolute right-0 top-36 w-80 sm:w-88 rounded-2xl border border-brand-500/30 bg-white/95 p-4 shadow-2xl backdrop-blur-md dark:border-brand-500/30 dark:bg-slate-900/95 animate-float-reverse">
           <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-2">
-              <div class="flex h-7 w-7 items-center justify-center rounded-xl bg-[#ea4335] text-white shadow-sm shadow-[#ea4335]/30">
+              <div class="flex h-7 w-7 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm shadow-brand-500/30">
                 <Bot class="h-4 w-4" />
               </div>
               <div>
@@ -231,7 +231,7 @@
 
           <!-- Typing Simulation -->
           <div class="mt-2.5 rounded-xl bg-slate-50/80 p-2.5 text-xs text-slate-700 dark:bg-slate-800/80 dark:text-slate-200 leading-relaxed font-mono">
-            Halo kak Anisa! Bisa banget custom ukuran jumbo. Pengerjaan 7-10 hari kerja. Silakan DM kami ya kak agar kami bantu ukurnya<span class="inline-block h-3.5 w-1.5 bg-[#ea4335] ml-0.5 align-middle animate-typing-cursor"></span>
+            Halo kak Anisa! Bisa banget custom ukuran jumbo. Pengerjaan 7-10 hari kerja. Silakan DM kami ya kak agar kami bantu ukurnya<span class="inline-block h-3.5 w-1.5 bg-brand-500 ml-0.5 align-middle animate-typing-cursor"></span>
           </div>
 
           <div class="mt-2.5 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
@@ -272,7 +272,7 @@
       <div class="rounded-3xl border border-slate-200/90 bg-white/95 p-6 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 sm:p-8">
         <!-- Logo & Card Header -->
         <div class="flex items-center gap-3">
-          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ea4335] text-white shadow-md shadow-[#ea4335]/30">
+          <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md shadow-brand-500/30">
             <MessageSquareQuote class="h-6 w-6" />
           </div>
           <div>
@@ -294,7 +294,7 @@
             onclick={() => (showGooglePicker = true)}
           >
             {#if isGoogleLoading}
-              <Loader2 class="h-4.5 w-4.5 animate-spin text-[#ea4335]" />
+              <Loader2 class="h-4.5 w-4.5 animate-spin text-brand-500" />
               <span>{isLangEn ? 'Connecting with Google...' : 'Menghubungkan ke Google...'}</span>
             {:else}
               <svg class="h-4.5 w-4.5 shrink-0" viewBox="0 0 24 24">
@@ -326,7 +326,7 @@
                 <button
                   type="button"
                   class="flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all {email === u.email
-                    ? 'border-[#ea4335] bg-[#ea4335]/8 text-[#b3261e] dark:border-[#ea4335] dark:bg-[#ea4335]/15 dark:text-red-300 font-bold'
+                    ? 'border-brand-500 bg-brand-500/8 text-brand-700 dark:border-brand-500 dark:bg-brand-500/15 dark:text-brand-300 font-bold'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'}"
                   onclick={() => handleQuickLogin(u)}
                 >
@@ -351,7 +351,7 @@
                 type="email"
                 bind:value={email}
                 required
-                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-[#ea4335] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
+                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
               />
             </div>
           </div>
@@ -367,7 +367,7 @@
                 type="password"
                 bind:value={password}
                 required
-                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-[#ea4335] focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
+                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
               />
             </div>
           </div>
@@ -376,7 +376,7 @@
           <button
             type="submit"
             disabled={isLoading || isGoogleLoading}
-            class="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#ea4335] py-2.5 text-xs font-bold text-white shadow-sm shadow-[#ea4335]/25 transition-all hover:bg-[#d93025] hover:shadow-[#ea4335]/35 active:scale-98 disabled:opacity-50"
+            class="mt-1 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-2.5 text-xs font-bold text-white shadow-sm shadow-brand-500/25 transition-all hover:bg-brand-600 hover:shadow-brand-500/35 active:scale-98 disabled:opacity-50"
           >
             {#if isLoading}
               <div class="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>

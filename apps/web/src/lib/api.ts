@@ -218,6 +218,12 @@ export const api = {
     return res.ok;
   },
 
+  /** Queue an immediate poll of the account's latest posts/comments. */
+  async syncAccount(ws: string = 'maujahit', accountId: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/sync`, { method: 'POST' });
+    if (!res.ok) throw new Error('Gagal memulai sinkronisasi');
+  },
+
   async getPolicy(ws: string = 'maujahit', accountId: string): Promise<ReplyPolicy> {
     const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`);
     if (!res.ok) throw new Error('Gagal mengambil konfigurasi aturan');

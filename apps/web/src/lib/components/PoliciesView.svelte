@@ -178,7 +178,7 @@
 
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-xl bg-[#ea4335] px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-[#d93025] active:scale-95 disabled:opacity-50"
+        class="inline-flex items-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95 disabled:opacity-50"
         onclick={handleSavePolicy}
         disabled={isSaving}
       >
@@ -247,19 +247,19 @@
           <!-- Auto Mode -->
           <label
             class="flex cursor-pointer flex-col justify-between rounded-xl border p-4 transition {policy.mode === 'auto'
-              ? 'border-[#ea4335] bg-[#ea4335]/5 dark:border-[#ea4335] dark:bg-[#ea4335]/15'
+              ? 'border-brand-500 bg-brand-500/5 dark:border-brand-500 dark:bg-brand-500/15'
               : 'border-slate-200 hover:border-slate-300 dark:border-slate-800'}"
           >
             <div>
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-slate-900 dark:text-white">Full Auto</span>
-                <input type="radio" name="mode" value="auto" bind:group={policy.mode} class="text-[#ea4335] focus:ring-[#ea4335]" />
+                <input type="radio" name="mode" value="auto" bind:group={policy.mode} class="text-brand-500 focus:ring-brand-500" />
               </div>
               <p class="mt-1.5 text-[11px] text-slate-500 leading-normal">
                 Auto-reply langsung dikirim untuk komentar aman & intent terdaftar. Komentar berisiko tetap ditahan!
               </p>
             </div>
-            <span class="mt-3 inline-block text-[10px] font-semibold text-[#ea4335] dark:text-red-400">Khusus Owner</span>
+            <span class="mt-3 inline-block text-[10px] font-semibold text-brand-500 dark:text-brand-400">Khusus Owner</span>
           </label>
         </div>
       </div>
@@ -306,7 +306,7 @@
           <div>
             <div class="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
               <span>Minimal Confidence:</span>
-              <span class="font-mono text-[#ea4335]">{Math.round(policy.minConfidence * 100)}%</span>
+              <span class="font-mono text-brand-500">{Math.round(policy.minConfidence * 100)}%</span>
             </div>
             <input
               type="range"
@@ -314,7 +314,7 @@
               max="0.99"
               step="0.05"
               bind:value={policy.minConfidence}
-              class="mt-2 w-full accent-[#ea4335]"
+              class="mt-2 w-full accent-brand-500"
             />
             <p class="mt-1 text-[10px] text-slate-400">Di bawah batas ini otomatis masuk antrean review.</p>
           </div>
@@ -342,7 +342,7 @@
                 type="checkbox"
                 id="autohide"
                 bind:checked={policy.autoHideSpam}
-                class="h-4 w-4 rounded text-[#ea4335] focus:ring-[#ea4335]"
+                class="h-4 w-4 rounded text-brand-500 focus:ring-brand-500"
               />
               <label for="autohide" class="text-xs text-slate-600 dark:text-slate-400">
                 Sembunyikan judol/link otomatis
@@ -394,9 +394,9 @@
           </label>
           <div class="mt-2 flex flex-wrap gap-1.5">
             {#each policy.brandVoice.forbiddenPhrases as phrase}
-              <span class="inline-flex items-center gap-1 rounded-full bg-[#ea4335]/10 px-2.5 py-1 text-[11px] font-medium text-[#b3261e] border border-[#ea4335]/20 dark:bg-[#ea4335]/20 dark:text-red-300 dark:border-[#ea4335]/30">
+              <span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-700 border border-rose-500/20 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30">
                 <span>"{phrase}"</span>
-                <button type="button" onclick={() => removeForbiddenPhrase(phrase)} class="hover:text-[#b3261e] transition-colors">
+                <button type="button" onclick={() => removeForbiddenPhrase(phrase)} class="hover:text-rose-700 transition-colors">
                   <X class="h-3 w-3" />
                 </button>
               </span>
@@ -426,7 +426,7 @@
     <!-- Right Col: Interactive Live Brand Voice Tester -->
     <div class="space-y-4">
       <div class="soft-card p-5.5">
-        <div class="flex items-center gap-2 text-[#ea4335] dark:text-red-400">
+        <div class="flex items-center gap-2 text-brand-500 dark:text-brand-400">
           <Wand2 class="h-5 w-5" />
           <h2 class="text-sm font-bold text-slate-900 dark:text-white">
             Uji Coba Brand Voice (Live)
@@ -459,7 +459,7 @@
 
           <button
             type="button"
-            class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 font-semibold text-white shadow-xs transition hover:bg-slate-800 active:scale-95 disabled:opacity-50 dark:bg-[#ea4335] dark:hover:bg-[#d93025]"
+            class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 font-semibold text-white shadow-xs transition hover:bg-slate-800 active:scale-95 disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600"
             onclick={handleRunPreview}
             disabled={isTestingPreview || !sampleCommentInput.trim()}
           >
@@ -506,8 +506,8 @@
               {#if previewResult.postCheck.passed}
                 <span class="ml-1 text-emerald-600 font-bold">Lolos Validasi (Aman)</span>
               {:else}
-                <span class="ml-1 text-[#ea4335] font-bold">Pelanggaran Ditemukan:</span>
-                <ul class="list-disc pl-4 text-[#ea4335]">
+                <span class="ml-1 text-rose-500 font-bold">Pelanggaran Ditemukan:</span>
+                <ul class="list-disc pl-4 text-rose-500">
                   {#each previewResult.postCheck.violations as v}
                     <li>{v}</li>
                   {/each}

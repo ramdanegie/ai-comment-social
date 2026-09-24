@@ -3,13 +3,24 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  /* Google Brand Identity Colors */
-  --color-google-red: #ea4335;
-  --color-google-red-hover: #d93025;
-  --color-google-red-dark: #b3261e;
+  /* Brand (primary actions, active nav, focus). Kept separate from rose = risk/destructive (PRD §18.2).
+     Rebrand = change this scale only. */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+  --color-brand-950: #1e1b4b;
+
+  /* Google Brand Identity Colors (Google button, toasts) */
   --color-google-blue: #1a73e8;
   --color-google-green: #1e8e3e;
   --color-google-yellow: #f9ab00;
@@ -130,4 +141,19 @@ html {
 
 .animate-typing-cursor {
   animation: typingBlink 1s infinite;
+}
+
+/* Visible keyboard focus everywhere (PRD §18.2-6) */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

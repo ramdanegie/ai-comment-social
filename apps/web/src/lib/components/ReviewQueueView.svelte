@@ -4,20 +4,23 @@
     CheckCircle,
     RotateCcw,
     EyeOff,
-    XCircle,
+    X,
     ShieldAlert,
-    Sparkles,
-    Keyboard,
-    CornerDownLeft,
-    Check,
+    Send,
     AlertCircle,
-    User,
-    Lock
+    Lock,
+    ArrowLeft,
+    ExternalLink,
+    Keyboard
   } from 'lucide-svelte';
   import { api } from '../api';
   import type { CommentItem, UserRole } from '../types';
   import Badge from './Badge.svelte';
+  import InstagramIcon from './icons/InstagramIcon.svelte';
+  import FacebookIcon from './icons/FacebookIcon.svelte';
+  import TiktokIcon from './icons/TiktokIcon.svelte';
   import { toast } from '$lib/toast';
+  import { timeAgo } from '$lib/format';
 
   let {
     workspaceSlug = 'maujahit',
@@ -31,26 +34,28 @@
     onReviewed?: () => void;
   } = $props();
 
+  const HIGH_RISK = ['threat', 'hate', 'toxic'];
+  const PLATFORM_LABEL: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok' };
+
   let queue: CommentItem[] = $state([]);
-  let loading: boolean = $state(true);
-  let processingId: string | null = $state(null);
-  let successNotice: string | null = $state(null);
-  let editableDrafts: Record<string, string> = $state({});
+  let loading = $state(true);
+  let processingId = $state<string | null>(null);
+  let drafts: Record<string, string> = $state({});
+  let selectedId = $state<string | null>(null);
+  /** Mobile: list ↔ detail. Desktop shows both. */
+  let mobileShowDetail = $state(false);
+
+  let selected = $derived(queue.find((c) => c.id === selectedId) ?? null);
+  let isHighRisk = $derived(HIGH_RISK.includes(selected?.classification?.riskLabel ?? ''));
+  let canAct = $derived(currentRole !== 'viewer');
+  let draftText = $derived(selected ? (drafts[selected.id] ?? '') : '');
 
   async function loadQueue() {
     loading = true;
     try {
       queue = await api.getReviewQueue(workspaceSlug);
-      // Initialize draft edits
-      const drafts: Record<string, string> = {};
-      for (const item of queue) {
-        if (item.reply?.draftText) {
-          drafts[item.id] = item.reply.draftText;
-        } else {
-          drafts[item.id] = '';
-        }
-      }
-      editableDrafts = drafts;
+      drafts = Object.fromEntries(queue.map((c) => [c.id, c.reply?.draftText ?? '']));
+      selectedId = queue[0]?.id ?? null;
     } finally {
       loading = false;
     }
@@ -58,307 +63,424 @@
 
   onMount(() => {
     loadQueue();
-    if (typeof window !== 'undefined') {
-      window.addEventListener('keydown', handleKeydown);
-    }
+    window.addEventListener('keydown', handleKeydown);
   });
-
   onDestroy(() => {
-    if (typeof window !== 'undefined') {
-      window.removeEventListener('keydown', handleKeydown);
-    }
+    if (typeof window !== 'undefined') window.removeEventListener('keydown', handleKeydown);
   });
 
-  // Global Keyboard shortcuts: A, R, H, D (disabled while typing in input/textarea)
+  function select(id: string) {
+    selectedId = id;
+    mobileShowDetail = true;
+  }
+
+  function move(delta: number) {
+    if (!queue.length) return;
+    const i = Math.max(0, queue.findIndex((c) => c.id === selectedId));
+    const next = queue[Math.min(queue.length - 1, Math.max(0, i + delta))];
+    selectedId = next.id;
+    document.getElementById(`rq-${next.id}`)?.scrollIntoView({ block: 'nearest' });
+  }
+
+  /** Remove the handled item and focus the next one so the admin can keep going. */
+  function removeAndAdvance(id: string) {
+    const i = queue.findIndex((c) => c.id === id);
+    queue = queue.filter((c) => c.id !== id);
+    selectedId = queue[Math.min(i, queue.length - 1)]?.id ?? null;
+    if (!selectedId) mobileShowDetail = false;
+    onReviewed();
+  }
+
+  // Shortcuts act on the selected comment (PRD §10 / §18.2-6). Disabled while typing.
   function handleKeydown(e: KeyboardEvent) {
-    const activeEl = document.activeElement;
-    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {
+      if (e.key === 'Escape') (el as HTMLElement).blur();
       return;
     }
-    if (queue.length === 0) return;
-    const topItem = queue[0];
+    if (e.metaKey || e.ctrlKey || e.altKey || !selected) return;
 
-    if (e.key.toLowerCase() === 'a') {
+    const key = e.key.toLowerCase();
+    const actions: Record<string, () => void> = {
+      j: () => move(1),
+      arrowdown: () => move(1),
+      k: () => move(-1),
+      arrowup: () => move(-1),
+      a: () => handleApprove(),
+      e: () => document.getElementById('rq-draft')?.focus(),
+      r: () => handleRegenerate(),
+      h: () => handleHide(),
+      d: () => handleDismiss()
+    };
+    if (actions[key]) {
       e.preventDefault();
-      handleApprove(topItem.id);
-    } else if (e.key.toLowerCase() === 'r') {
-      e.preventDefault();
-      handleRegenerate(topItem.id);
-    } else if (e.key.toLowerCase() === 'h') {
-      e.preventDefault();
-      handleHide(topItem.id);
-    } else if (e.key.toLowerCase() === 'd') {
-      e.preventDefault();
-      handleDismiss(topItem.id);
+      actions[key]();
     }
   }
 
-  async function handleApprove(commentId: string) {
-    if (currentRole === 'viewer') {
-      toast.error(
-        isLangEn ? 'Viewer role is not permitted to approve replies.' : 'Role "Viewer" tidak memiliki izin untuk menyetujui balasan.',
-        'Akses Ditolak (HTTP 403)'
+  function denyViewer() {
+    toast.error(
+      isLangEn ? 'Viewer role can only read the queue.' : 'Role Viewer hanya bisa melihat antrean.',
+      isLangEn ? 'Access denied' : 'Akses ditolak'
+    );
+  }
+
+  async function run(action: () => Promise<void>) {
+    if (!selected || processingId) return;
+    if (!canAct) return denyViewer();
+    processingId = selected.id;
+    try {
+      await action();
+    } catch (err) {
+      toast.error((err as Error).message || 'Terjadi kesalahan', isLangEn ? 'Failed' : 'Gagal');
+    } finally {
+      processingId = null;
+    }
+  }
+
+  const handleApprove = () =>
+    run(async () => {
+      const item = selected!;
+      const text = (drafts[item.id] ?? '').trim();
+      if (!text) {
+        toast.warning(isLangEn ? 'Write a reply first.' : 'Tulis balasan dulu sebelum mengirim.');
+        document.getElementById('rq-draft')?.focus();
+        return;
+      }
+      await api.approveReview(workspaceSlug, item.id, text);
+      toast.success(
+        isLangEn
+          ? `Reply is being sent to ${PLATFORM_LABEL[item.platform]}.`
+          : `Balasan sedang dikirim ke ${PLATFORM_LABEL[item.platform]}.`,
+        isLangEn ? 'Approved' : 'Disetujui'
       );
-      return;
-    }
-    processingId = commentId;
-    const text = editableDrafts[commentId];
-    await api.approveReview(workspaceSlug, commentId, text);
-    queue = queue.filter((c) => c.id !== commentId);
-    processingId = null;
-    successNotice = isLangEn ? 'Reply approved and sent!' : 'Balasan disetujui & berhasil dikirim!';
-    toast.success(successNotice, isLangEn ? 'Approved' : 'Terkirim');
-    setTimeout(() => (successNotice = null), 3000);
-    onReviewed();
-  }
+      removeAndAdvance(item.id);
+    });
 
-  async function handleRegenerate(commentId: string) {
-    if (currentRole === 'viewer') {
-      toast.error(
-        isLangEn ? 'Viewer role cannot regenerate drafts.' : 'Role "Viewer" hanya bisa melihat antrean.',
-        'Akses Ditolak'
+  const handleRegenerate = () =>
+    run(async () => {
+      const id = selected!.id;
+      drafts[id] = await api.regenerateReview(workspaceSlug, id);
+    });
+
+  const handleHide = () =>
+    run(async () => {
+      const item = selected!;
+      await api.hideReview(workspaceSlug, item.id);
+      toast.info(
+        isLangEn
+          ? `Comment will be hidden on ${PLATFORM_LABEL[item.platform]}.`
+          : `Komentar akan disembunyikan di ${PLATFORM_LABEL[item.platform]}.`
       );
-      return;
-    }
-    processingId = commentId;
-    const newText = await api.regenerateReview(workspaceSlug, commentId);
-    editableDrafts[commentId] = newText;
-    processingId = null;
-  }
+      removeAndAdvance(item.id);
+    });
 
-  async function handleHide(commentId: string) {
-    if (currentRole === 'viewer') {
-      toast.error(
-        isLangEn ? 'Viewer role cannot hide comments.' : 'Role "Viewer" tidak bisa menyembunyikan komentar.',
-        'Akses Ditolak'
-      );
-      return;
-    }
-    processingId = commentId;
-    await api.hideReview(workspaceSlug, commentId);
-    queue = queue.filter((c) => c.id !== commentId);
-    processingId = null;
-    successNotice = isLangEn ? 'Comment hidden on platform' : 'Komentar disembunyikan di platform';
-    toast.info(successNotice);
-    setTimeout(() => (successNotice = null), 3000);
-    onReviewed();
-  }
-
-  async function handleDismiss(commentId: string) {
-    processingId = commentId;
-    await api.dismissReview(workspaceSlug, commentId);
-    queue = queue.filter((c) => c.id !== commentId);
-    processingId = null;
-    onReviewed();
-  }
+  const handleDismiss = () =>
+    run(async () => {
+      const id = selected!.id;
+      await api.dismissReview(workspaceSlug, id);
+      removeAndAdvance(id);
+    });
 </script>
 
-<div class="space-y-6">
-  <!-- Header & Instructions -->
-  <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+{#snippet platformIcon(platform: string, cls = 'h-3.5 w-3.5')}
+  {#if platform === 'instagram'}
+    <InstagramIcon class={cls} />
+  {:else if platform === 'facebook'}
+    <FacebookIcon class={cls} />
+  {:else}
+    <TiktokIcon class={cls} />
+  {/if}
+{/snippet}
+
+{#snippet kbd(k: string)}
+  <kbd class="rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">{k}</kbd>
+{/snippet}
+
+<div class="space-y-5">
+  <!-- Header -->
+  <div class="flex flex-wrap items-end justify-between gap-3">
     <div>
-      <div class="flex items-center gap-2">
-        <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
-          {isLangEn ? 'Moderation Review Queue' : 'Antrean Review Moderasi'}
-        </h1>
-        <span class="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-          {queue.length} Pending
-        </span>
-      </div>
-      <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-        {isLangEn
-          ? 'Comments held for human verification (Toxic, Complaints, Threats, or Low Confidence)'
-          : 'Komentar yang ditahan AI untuk keputusan manusia (Toxic, Keluhan, Ancaman, atau Akun Shadow)'}
+      <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+        {isLangEn ? 'Review queue' : 'Antrean Review'}
+      </h1>
+      <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        {#if loading}
+          &nbsp;
+        {:else if queue.length}
+          {queue.length} {isLangEn ? 'comments need a decision' : 'komentar menunggu keputusanmu'} ·
+          {isLangEn ? 'highest risk first' : 'risiko tertinggi di atas'}
+        {:else}
+          {isLangEn ? 'Nothing waiting' : 'Tidak ada yang menunggu'}
+        {/if}
       </p>
     </div>
-
-    <!-- Keyboard Shortcuts Legend -->
-    <div class="hidden items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-xs dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 md:flex">
+    <div class="hidden items-center gap-3 text-xs text-slate-500 dark:text-slate-400 lg:flex">
       <Keyboard class="h-4 w-4 text-slate-400" />
-      <span class="font-medium">Shortcut:</span>
-      <span class="inline-flex items-center gap-1 font-mono"><kbd class="rounded bg-slate-100 px-1.5 py-0.5 border text-[11px] dark:bg-slate-800">A</kbd> Approve</span>
-      <span class="inline-flex items-center gap-1 font-mono"><kbd class="rounded bg-slate-100 px-1.5 py-0.5 border text-[11px] dark:bg-slate-800">R</kbd> Regenerate</span>
-      <span class="inline-flex items-center gap-1 font-mono"><kbd class="rounded bg-slate-100 px-1.5 py-0.5 border text-[11px] dark:bg-slate-800">H</kbd> Hide</span>
-      <span class="inline-flex items-center gap-1 font-mono"><kbd class="rounded bg-slate-100 px-1.5 py-0.5 border text-[11px] dark:bg-slate-800">D</kbd> Dismiss</span>
+      <span class="flex items-center gap-1">{@render kbd('J')}{@render kbd('K')} {isLangEn ? 'move' : 'pindah'}</span>
+      <span class="flex items-center gap-1">{@render kbd('E')} edit</span>
+      <span class="flex items-center gap-1">{@render kbd('A')} {isLangEn ? 'send' : 'kirim'}</span>
+      <span class="flex items-center gap-1">{@render kbd('H')} {isLangEn ? 'hide' : 'sembunyikan'}</span>
+      <span class="flex items-center gap-1">{@render kbd('D')} {isLangEn ? 'close' : 'tutup'}</span>
     </div>
   </div>
 
-  <!-- Role Warning if Viewer -->
-  {#if currentRole === 'viewer'}
-    <div class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
-      <Lock class="h-4 w-4 shrink-0 text-amber-600" />
-      <span>
-        <strong>Mode Viewer:</strong> Anda sedang dalam mode peninjau hanya-baca. Aksi persetujuan dan moderasi dinonaktifkan untuk role ini. Ubah role di menu navigasi atas untuk menguji aksi admin/owner.
-      </span>
+  {#if !canAct}
+    <div class="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+      <Lock class="h-4 w-4 shrink-0" />
+      {isLangEn
+        ? 'Read-only: the Viewer role cannot send, hide, or close comments.'
+        : 'Hanya-baca: role Viewer tidak bisa mengirim, menyembunyikan, atau menutup komentar.'}
     </div>
   {/if}
 
-  <!-- Success Toast -->
-  {#if successNotice}
-    <div class="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200 animate-in fade-in slide-in-from-top-2">
-      <CheckCircle class="h-4 w-4 text-emerald-600" />
-      <span>{successNotice}</span>
-    </div>
-  {/if}
-
-  <!-- Queue Cards List -->
   {#if loading}
-    <div class="space-y-4">
-      {#each [1, 2] as _}
-        <div class="h-56 w-full animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800"></div>
-      {/each}
+    <div class="grid gap-4 lg:grid-cols-[22rem_1fr]">
+      <div class="space-y-2">
+        {#each [1, 2, 3, 4] as _}
+          <div class="h-20 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800"></div>
+        {/each}
+      </div>
+      <div class="hidden h-96 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800 lg:block"></div>
     </div>
   {:else if queue.length === 0}
-    <!-- Empty State -->
-    <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 px-4 text-center dark:border-slate-800 dark:bg-slate-900">
-      <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-        <CheckCircle class="h-8 w-8" />
+    <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-16 text-center dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+        <CheckCircle class="h-6 w-6" />
       </div>
-      <h3 class="mt-4 text-base font-bold text-slate-900 dark:text-white">
-        {isLangEn ? 'All Caught Up!' : 'Semua Komentar Selesai Ditinjau!'}
+      <h3 class="mt-4 text-base font-semibold text-slate-900 dark:text-white">
+        {isLangEn ? 'All caught up' : 'Semua sudah ditinjau'}
       </h3>
-      <p class="mt-1 max-w-sm text-xs text-slate-500 dark:text-slate-400">
+      <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">
         {isLangEn
-          ? 'No pending reviews right now. AI will alert you when risky comments or new customer queries arrive.'
-          : 'Tidak ada komentar tertahan saat ini. AI akan segera menotifikasi Anda jika ada komentar berisiko atau pertanyaan baru.'}
+          ? 'Risky comments and questions the AI is unsure about will show up here.'
+          : 'Komentar berisiko dan pertanyaan yang AI ragu menjawab akan muncul di sini.'}
       </p>
     </div>
   {:else}
-    <div class="space-y-4">
-      {#each queue as item (item.id)}
-        {@const isHighRisk = ['threat', 'hate', 'toxic'].includes(item.classification?.riskLabel || '')}
-        <div
-          class="rounded-2xl border transition-all duration-200 soft-card-hover {isHighRisk
-            ? 'border-[#ea4335]/30 bg-[#ea4335]/[0.02] shadow-[0_2px_12px_rgba(234,67,53,0.08)] dark:border-[#ea4335]/25 dark:bg-[#ea4335]/10'
-            : 'soft-card'}"
-        >
-          <div class="p-5 sm:p-6 space-y-4">
-            <!-- Top Card Header: Author, Platform, Time, Badges -->
-            <div class="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-sm font-bold text-slate-900 dark:text-white">@{item.authorName}</span>
-                <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-800 dark:text-slate-300 uppercase">
-                  {item.platform}
-                </span>
-                <span class="text-xs text-slate-400 font-mono">
-                  {new Date(item.commentedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                </span>
+    <div class="grid gap-4 lg:grid-cols-[22rem_1fr] lg:items-start">
+      <!-- List -->
+      <ul
+        class="soft-card divide-y divide-slate-100 overflow-hidden p-0 dark:divide-slate-800 lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto {mobileShowDetail ? 'hidden lg:block' : ''}"
+        aria-label={isLangEn ? 'Comments to review' : 'Komentar untuk ditinjau'}
+      >
+        {#each queue as item (item.id)}
+          {@const risky = HIGH_RISK.includes(item.classification?.riskLabel ?? '')}
+          {@const active = item.id === selectedId}
+          <li id="rq-{item.id}">
+            <button
+              type="button"
+              onclick={() => select(item.id)}
+              aria-current={active}
+              class="relative flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors {active
+                ? 'bg-brand-50/70 dark:bg-brand-500/10'
+                : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}"
+            >
+              {#if active}<span class="absolute inset-y-0 left-0 w-0.5 bg-brand-500"></span>{/if}
+              <div class="flex items-center gap-2 text-xs">
+                <span class="text-slate-400">{@render platformIcon(item.platform)}</span>
+                <span class="truncate font-semibold text-slate-900 dark:text-white">@{item.authorName}</span>
+                <span class="ml-auto shrink-0 text-slate-400">{timeAgo(item.commentedAt, isLangEn)}</span>
               </div>
-
-              <!-- AI Classification tags -->
-              <div class="flex flex-wrap items-center gap-1.5">
+              <p class="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">{item.text}</p>
+              <div class="flex flex-wrap gap-1">
                 {#if item.classification}
-                  <Badge type="sentiment" value={item.classification.sentiment} />
-                  <Badge type="intent" value={item.classification.intent} />
                   {#if item.classification.riskLabel !== 'none'}
                     <Badge type="risk" value={item.classification.riskLabel} />
+                  {:else}
+                    <Badge type="intent" value={item.classification.intent} />
                   {/if}
-                  <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-mono text-slate-600 dark:bg-slate-800 dark:text-slate-300" title="Tingkat keyakinan AI">
-                    {Math.round(item.classification.confidence * 100)}% conf
-                  </span>
+                {/if}
+                {#if risky}
+                  <span class="sr-only">{isLangEn ? 'high risk' : 'risiko tinggi'}</span>
                 {/if}
               </div>
-            </div>
+            </button>
+          </li>
+        {/each}
+      </ul>
 
-            <!-- Post Context Snippet (if available) -->
-            {#if item.post}
-              <div class="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-850 dark:text-slate-400">
-                {#if item.post.mediaUrl}
-                  <img src={item.post.mediaUrl} alt="Post" class="h-9 w-9 shrink-0 rounded-lg object-cover" />
-                {/if}
-                <div class="min-w-0 flex-1 truncate">
-                  <span class="font-semibold text-slate-700 dark:text-slate-300">Konteks Post:</span> {item.post.caption}
+      <!-- Detail -->
+      {#if selected}
+        {@const cls = selected.classification}
+        <section
+          class="soft-card p-0 lg:overflow-hidden {mobileShowDetail ? '' : 'hidden lg:block'}"
+          aria-label={isLangEn ? 'Comment detail' : 'Detail komentar'}
+        >
+          <div class="space-y-5 p-5 sm:p-6">
+            <button
+              type="button"
+              class="-ml-1 inline-flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-slate-900 dark:hover:text-white lg:hidden"
+              onclick={() => (mobileShowDetail = false)}
+            >
+              <ArrowLeft class="h-4 w-4" />
+              {isLangEn ? 'Back to list' : 'Kembali ke daftar'}
+            </button>
+
+            <!-- Author + meta -->
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-base font-semibold text-slate-900 dark:text-white">@{selected.authorName}</p>
+                <p class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+                  {@render platformIcon(selected.platform)}
+                  {PLATFORM_LABEL[selected.platform]}
+                  {#if selected.account?.username}· {selected.account.username}{/if}
+                  · {new Date(selected.commentedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+              </div>
+              {#if cls}
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <Badge type="sentiment" value={cls.sentiment} />
+                  <Badge type="intent" value={cls.intent} />
+                  {#if cls.riskLabel !== 'none'}<Badge type="risk" value={cls.riskLabel} />{/if}
+                  <span
+                    class="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    title={isLangEn ? 'AI confidence' : 'Keyakinan AI'}
+                  >
+                    {Math.round(cls.confidence * 100)}%
+                  </span>
                 </div>
-              </div>
-            {/if}
-
-            <!-- Comment Text -->
-            <div class="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3.5 dark:border-slate-800/80 dark:bg-slate-800/40">
-              <p class="text-sm font-medium text-slate-900 dark:text-slate-100 leading-relaxed">
-                "{item.text}"
-              </p>
+              {/if}
             </div>
 
-            <!-- AI Reason Explanation -->
-            {#if item.classification?.reason}
-              <div class="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <AlertCircle class="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
-                <span><strong class="text-slate-700 dark:text-slate-300">Alasan Ditahan:</strong> {item.classification.reason}</span>
+            <!-- The comment -->
+            <blockquote class="border-l-2 border-slate-300 pl-4 text-[15px] leading-relaxed text-slate-900 dark:border-slate-600 dark:text-slate-100">
+              {selected.text}
+            </blockquote>
+
+            <!-- Why held -->
+            {#if cls?.reason}
+              <div
+                class="flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm {isHighRisk
+                  ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-200'
+                  : 'bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'}"
+              >
+                {#if isHighRisk}
+                  <ShieldAlert class="mt-0.5 h-4 w-4 shrink-0" />
+                {:else}
+                  <AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+                {/if}
+                <span>
+                  <strong class="font-semibold">{isLangEn ? 'Why it was held:' : 'Kenapa ditahan:'}</strong>
+                  {cls.reason}
+                  {#if isHighRisk}
+                    <br /><span class="text-xs opacity-80">
+                      {isLangEn
+                        ? 'High-risk comments are never answered automatically. Hiding is usually the safest choice.'
+                        : 'Komentar berisiko tinggi tidak pernah dibalas otomatis. Menyembunyikan biasanya pilihan paling aman.'}
+                    </span>
+                  {/if}
+                </span>
               </div>
             {/if}
 
-            <!-- Draft Response Textarea (Editable) -->
-            <div class="space-y-1.5 pt-2">
-              <div class="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <span>{isLangEn ? 'AI Draft Response (Editable):' : 'Draft Balasan AI (Bisa Diedit):'}</span>
-                {#if item.classification?.riskLabel === 'threat' || item.classification?.riskLabel === 'hate'}
-                  <span class="flex items-center gap-1 text-[#ea4335] dark:text-red-400 font-bold text-[11px]">
-                    <ShieldAlert class="h-3.5 w-3.5 shrink-0" />
-                    <span>Kategori Berisiko Tinggi: Tindakan manual diperlukan</span>
-                  </span>
+            <!-- Post context -->
+            {#if selected.post}
+              <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+                {#if selected.post.mediaUrl}
+                  <img src={selected.post.mediaUrl} alt="" class="h-10 w-10 shrink-0 rounded-lg object-cover" />
                 {/if}
+                <p class="min-w-0 flex-1 line-clamp-2">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">{isLangEn ? 'On post:' : 'Di post:'}</span>
+                  {selected.post.caption}
+                </p>
+                {#if selected.post.permalink}
+                  <a
+                    href={selected.post.permalink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex shrink-0 items-center gap-1 font-medium text-brand-600 hover:underline dark:text-brand-400"
+                  >
+                    {isLangEn ? 'Open' : 'Buka'} <ExternalLink class="h-3 w-3" />
+                  </a>
+                {/if}
+              </div>
+            {/if}
+
+            <!-- Draft -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label for="rq-draft" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {isLangEn ? 'Reply' : 'Balasan'}
+                  {#if selected.reply?.draftText}
+                    <span class="font-normal text-slate-400">· {isLangEn ? 'AI draft, editable' : 'draft AI, bisa diedit'}</span>
+                  {/if}
+                </label>
+                <span class="font-mono text-[11px] text-slate-400">{draftText.length}</span>
               </div>
               <textarea
-                rows="2"
-                bind:value={editableDrafts[item.id]}
-                placeholder={isLangEn ? 'Type reply or leave blank...' : 'Tulis balasan atau gunakan rekomendasi AI...'}
-                class="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-900 transition focus:border-[#ea4335] focus:ring-2 focus:ring-[#ea4335]/20 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 shadow-2xs"
+                id="rq-draft"
+                rows="4"
+                bind:value={drafts[selected.id]}
+                disabled={!canAct}
+                placeholder={isHighRisk
+                  ? isLangEn
+                    ? 'No AI draft for high-risk comments. Write one only if a reply is really needed.'
+                    : 'AI tidak membuat draft untuk komentar berisiko. Tulis sendiri hanya jika memang perlu dibalas.'
+                  : isLangEn
+                    ? 'Write a reply…'
+                    : 'Tulis balasan…'}
+                class="w-full resize-y rounded-xl border border-slate-200 bg-white p-3 text-sm leading-relaxed text-slate-900 transition placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none disabled:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
               ></textarea>
             </div>
+          </div>
 
-            <!-- Action Buttons Grid (PRD §5.1 FR-6: Approve / Edit / Regenerate / Hide / Dismiss) -->
-            <div class="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <!-- Left side actions: Hide / Dismiss -->
-              <div class="flex items-center gap-2">
+          <!-- Actions -->
+          <div class="sticky bottom-[4.5rem] flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/95 px-5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 lg:static lg:bg-slate-50/60 lg:backdrop-blur-none">
+            <button
+              type="button"
+              onclick={handleDismiss}
+              disabled={!canAct || !!processingId}
+              title={isLangEn ? 'Close without action (D)' : 'Tutup tanpa tindakan (D)'}
+              class="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-200/60 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <X class="h-4 w-4" />
+              {isLangEn ? 'Close' : 'Tutup'}
+            </button>
+
+            <div class="ml-auto flex flex-wrap items-center gap-2">
+              {#if !isHighRisk}
                 <button
                   type="button"
-                  class="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white/70 px-3.5 py-2.5 text-xs font-semibold text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-95 sm:min-h-[36px] sm:py-2 dark:border-slate-700/80 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:bg-slate-800 shadow-2xs"
-                  onclick={() => handleDismiss(item.id)}
-                  title="Tutup antrean tanpa tindakan (D)"
+                  onclick={handleRegenerate}
+                  disabled={!canAct || !!processingId}
+                  title={isLangEn ? 'New AI draft (R)' : 'Draft AI baru (R)'}
+                  class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 >
-                  <XCircle class="h-3.5 w-3.5" />
-                  <span>{isLangEn ? 'Dismiss [D]' : 'Tutup [D]'}</span>
+                  <RotateCcw class="h-4 w-4 {processingId === selected.id ? 'animate-spin' : ''}" />
+                  {isLangEn ? 'Regenerate' : 'Buat ulang'}
                 </button>
+              {/if}
 
-                <button
-                  type="button"
-                  class="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white/70 px-3.5 py-2.5 text-xs font-semibold text-[#ea4335] transition-all hover:bg-[#ea4335]/10 active:scale-95 sm:min-h-[36px] sm:py-2 dark:border-slate-700/80 dark:bg-slate-800/60 dark:text-red-400 dark:hover:bg-[#ea4335]/20 shadow-2xs"
-                  onclick={() => handleHide(item.id)}
-                  title="Sembunyikan komentar di Instagram/Facebook (H)"
-                >
-                  <EyeOff class="h-3.5 w-3.5" />
-                  <span>{isLangEn ? 'Hide [H]' : 'Sembunyikan [H]'}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onclick={handleHide}
+                disabled={!canAct || !!processingId}
+                title={isLangEn ? 'Hide on the platform (H)' : 'Sembunyikan di platform (H)'}
+                class="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition disabled:opacity-40 {isHighRisk
+                  ? 'bg-rose-600 text-white shadow-sm hover:bg-rose-700'
+                  : 'border border-slate-200 bg-white text-rose-600 hover:bg-rose-50 dark:border-slate-700 dark:bg-slate-800 dark:text-rose-400'}"
+              >
+                <EyeOff class="h-4 w-4" />
+                {isLangEn ? 'Hide' : 'Sembunyikan'}
+              </button>
 
-              <!-- Right side actions: Regenerate & Approve -->
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  class="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white/70 px-3.5 py-2.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-100 active:scale-95 sm:min-h-[36px] sm:py-2 dark:border-slate-700/80 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800 shadow-2xs"
-                  onclick={() => handleRegenerate(item.id)}
-                  disabled={processingId === item.id}
-                  title="Generate variasi balasan baru (R)"
-                >
-                  <RotateCcw class="h-3.5 w-3.5 {processingId === item.id ? 'animate-spin' : ''}" />
-                  <span>{isLangEn ? 'Regenerate [R]' : 'Generate Ulang [R]'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="inline-flex min-h-[42px] items-center gap-1.5 rounded-xl bg-[#ea4335] px-4 py-2.5 text-xs font-semibold text-white shadow-sm shadow-[#ea4335]/25 transition-all hover:bg-[#d93025] hover:shadow-[#ea4335]/35 hover:scale-[1.01] active:scale-98 disabled:opacity-50 sm:min-h-[36px] sm:py-2"
-                  onclick={() => handleApprove(item.id)}
-                  disabled={processingId === item.id}
-                  title="Setujui dan kirim balasan ke platform (A)"
-                >
-                  <Check class="h-4 w-4" />
-                  <span>{isLangEn ? 'Approve & Send [A]' : 'Setujui & Kirim [A]'}</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onclick={handleApprove}
+                disabled={!canAct || !!processingId || !draftText.trim()}
+                title={isLangEn ? 'Send reply (A)' : 'Kirim balasan (A)'}
+                class="inline-flex h-9 items-center gap-1.5 rounded-lg px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 {isHighRisk
+                  ? 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
+                  : 'bg-brand-600 text-white shadow-sm hover:bg-brand-700'}"
+              >
+                <Send class="h-4 w-4" />
+                {isLangEn ? 'Send reply' : 'Kirim balasan'}
+              </button>
             </div>
           </div>
-        </div>
-      {/each}
+        </section>
+      {/if}
     </div>
   {/if}
 </div>

@@ -74,7 +74,7 @@
       <div class="flex items-start gap-4">
         <div
           class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl {isDanger
-            ? 'bg-[#ea4335]/10 text-[#ea4335] dark:bg-[#ea4335]/20 border border-[#ea4335]/20'
+            ? 'bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 border border-rose-500/20'
             : 'bg-[#1a73e8]/10 text-[#1a73e8] dark:bg-[#1a73e8]/20 border border-[#1a73e8]/20'}"
         >
           <AlertTriangle class="h-6 w-6" />
@@ -103,7 +103,7 @@
           onclick={handleConfirm}
           disabled={isSubmitting}
           class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all disabled:opacity-50 active:scale-98 {isDanger
-            ? 'bg-[#ea4335] hover:bg-[#d93025] shadow-[#ea4335]/20'
+            ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
             : 'bg-[#1a73e8] hover:bg-[#1557b0] shadow-[#1a73e8]/20'}"
         >
           {#if isSubmitting}
