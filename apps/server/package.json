@@ -6,7 +6,8 @@
     "dev": "bun --watch src/server.ts",
     "worker": "bun --watch src/worker.ts",
     "start": "bun src/server.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "meta": "bun scripts/meta-dev.ts"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.2.0",

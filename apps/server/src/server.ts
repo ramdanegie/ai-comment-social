@@ -7,6 +7,7 @@ import { LlmClassifier } from './contexts/moderation/domain/LlmClassifier';
 import { ReplyPolicyEvaluator } from './contexts/response/domain/ReplyPolicyEvaluator';
 import { LlmReplyGenerator } from './contexts/response/domain/LlmReplyGenerator';
 import { encryptToken, verifyMetaSignature, verifyMidtransSignature } from './shared/infrastructure/crypto';
+import { enqueueJob } from './contexts/engagement/application/MetaIngestion';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3099;
 
@@ -412,6 +413,18 @@ export const app = new Elysia()
     return { success: true };
   })
 
+  // Trigger an immediate poll (dev mode has no comment webhooks)
+  .post('/api/v1/workspaces/:ws/accounts/:id/sync', async ({ params }) => {
+    const ws = await getWorkspaceBySlugOrId(params.ws);
+    if (!ws) throw new Error('Workspace not found');
+    const acc = await db.query.socialAccounts.findFirst({
+      where: and(eq(schema.socialAccounts.id, params.id as any), eq(schema.socialAccounts.workspaceId, ws.id))
+    });
+    if (!acc) throw new Error('Account not found');
+    await enqueueJob('poll_account', { accountId: acc.id });
+    return { success: true, queued: true };
+  })
+
   // 3. Comments (List, Filter, Search, Detail, Label Correction)
   .get('/api/v1/workspaces/:ws/comments', async ({ params, query }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
@@ -615,30 +628,37 @@ export const app = new Elysia()
       });
 
       const replyText = body?.text || existingReply?.draftText || 'Terima kasih atas pesan Anda!';
+      const edited = !!body?.text && body.text !== existingReply?.draftText;
+      const source = edited ? 'human_written' : 'human_approved';
+
+      const comment = await db.query.comments.findFirst({
+        where: and(eq(schema.comments.id, params.commentId as any), eq(schema.comments.workspaceId, ws.id))
+      });
+      if (!comment) throw new Error('Comment not found');
+
+      if (existingReply?.externalReplyId) {
+        return { success: true, status: 'REPLIED' }; // invariant §4.3-3: one reply per comment
+      }
 
       if (existingReply) {
         await db
           .update(schema.replies)
-          .set({
-            finalText: replyText,
-            source: 'human_approved',
-            sentAt: new Date()
-          })
+          .set({ finalText: replyText, source, error: null })
           .where(eq(schema.replies.id, existingReply.id));
       } else {
         await db.insert(schema.replies).values({
-          commentId: params.commentId as any,
+          commentId: comment.id,
           draftText: replyText,
           finalText: replyText,
-          source: 'human_approved',
-          sentAt: new Date()
+          source
         });
       }
 
-      await db
-        .update(schema.comments)
-        .set({ status: 'REPLIED' })
-        .where(eq(schema.comments.id, params.commentId as any));
+      // Meta: send via worker (PRD §3.4). Other platforms are not integrated yet → mark replied locally.
+      const isMeta = comment.platform === 'instagram' || comment.platform === 'facebook';
+      const status = isMeta ? 'APPROVED' : 'REPLIED';
+      await db.update(schema.comments).set({ status }).where(eq(schema.comments.id, comment.id));
+      if (isMeta) await enqueueJob('send_reply', { commentId: comment.id });
 
       await db.insert(schema.auditLogs).values({
         workspaceId: ws.id,
@@ -646,10 +666,10 @@ export const app = new Elysia()
         action: 'reply.approved',
         targetType: 'comment',
         targetId: params.commentId,
-        meta: { finalText: replyText }
+        meta: { finalText: replyText, source }
       });
 
-      return { success: true, status: 'REPLIED' };
+      return { success: true, status };
     },
     {
       body: t.Optional(
@@ -706,15 +726,22 @@ export const app = new Elysia()
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
-    await db
-      .update(schema.comments)
-      .set({ status: 'HIDDEN' })
-      .where(eq(schema.comments.id, params.commentId as any));
+    const comment = await db.query.comments.findFirst({
+      where: and(eq(schema.comments.id, params.commentId as any), eq(schema.comments.workspaceId, ws.id))
+    });
+    if (!comment) throw new Error('Comment not found');
+
+    // Meta: worker hides on the platform, then sets HIDDEN. Other platforms: local status only.
+    if (comment.platform === 'instagram' || comment.platform === 'facebook') {
+      await enqueueJob('hide_comment', { commentId: comment.id, hide: true });
+    } else {
+      await db.update(schema.comments).set({ status: 'HIDDEN' }).where(eq(schema.comments.id, comment.id));
+    }
 
     await db.insert(schema.auditLogs).values({
       workspaceId: ws.id,
       actor: 'user',
-      action: 'comment.hidden',
+      action: 'comment.hide_requested',
       targetType: 'comment',
       targetId: params.commentId,
       meta: { timestamp: new Date() }

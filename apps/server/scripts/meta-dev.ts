@@ -1,0 +1,155 @@
+#!/usr/bin/env bun
+// Dev-mode helper for Meta (Jalur A): works for assets owned by users with an App Role, no App Review needed.
+//
+//   bun scripts/meta-dev.ts pages   <user_token>              → list Pages + linked IG accounts
+//   bun scripts/meta-dev.ts connect <workspace> <user_token>  → exchange to long-lived, save Page + IG accounts
+//   bun scripts/meta-dev.ts poll    <social_account_id>       → poll once now (no worker needed)
+//   bun scripts/meta-dev.ts comments <social_account_id>      → print latest remote posts + comments (read-only)
+//
+// <user_token> = short-lived User Token from Graph API Explorer (or already long-lived).
+
+import { db, schema, client } from '@replyra/db';
+import { eq } from 'drizzle-orm';
+import {
+  exchangeForLongLivedUserToken,
+  listPagesWithInstagram,
+  MetaGraph,
+  type MetaPage
+} from '../src/contexts/channel/infrastructure/MetaGraphClient';
+import { isMetaPlatform, pollAccount } from '../src/contexts/engagement/application/MetaIngestion';
+import { decryptToken, encryptToken } from '../src/shared/infrastructure/crypto';
+
+const [cmd, ...args] = process.argv.slice(2);
+
+function usage(): never {
+  console.log(`Usage:
+  bun scripts/meta-dev.ts pages    <user_token>
+  bun scripts/meta-dev.ts connect  <workspace_slug> <user_token>
+  bun scripts/meta-dev.ts poll     <social_account_id>
+  bun scripts/meta-dev.ts comments <social_account_id>`);
+  process.exit(1);
+}
+
+async function longLived(token: string) {
+  try {
+    const res = await exchangeForLongLivedUserToken(token);
+    const days = res.expires_in ? Math.round(res.expires_in / 86400) : '∞';
+    console.log(`✓ Long-lived user token (expires in ~${days} days)`);
+    return res.access_token;
+  } catch (err) {
+    console.warn(`! Exchange failed (${(err as Error).message}) — using token as-is`);
+    return token;
+  }
+}
+
+function printPages(pages: MetaPage[]) {
+  if (pages.length === 0) {
+    console.log('No Pages found. Check the token has pages_show_list and you have a role on the Page.');
+    return;
+  }
+  for (const p of pages) {
+    const ig = p.instagram_business_account;
+    console.log(`• Page ${p.name} (${p.id})${ig ? `  ↔  IG @${ig.username} (${ig.id})` : '  — no IG Professional linked'}`);
+  }
+}
+
+async function upsertAccount(
+  workspaceId: string,
+  platform: 'instagram' | 'facebook',
+  externalId: string,
+  username: string,
+  avatarUrl: string | undefined,
+  pageToken: string
+) {
+  const values = {
+    workspaceId,
+    platform,
+    externalId,
+    username,
+    avatarUrl,
+    accessTokenEnc: encryptToken(pageToken),
+    tokenExpiresAt: null, // Page token from a long-lived user token does not expire
+    scopes:
+      platform === 'instagram'
+        ? ['instagram_basic', 'instagram_manage_comments', 'pages_read_engagement']
+        : ['pages_read_engagement', 'pages_read_user_content', 'pages_manage_engagement'],
+    status: 'connected'
+  };
+
+  const [acc] = await db
+    .insert(schema.socialAccounts)
+    .values(values)
+    .onConflictDoUpdate({ target: [schema.socialAccounts.platform, schema.socialAccounts.externalId], set: values })
+    .returning();
+
+  await db
+    .insert(schema.replyPolicies)
+    .values({
+      socialAccountId: acc.id,
+      mode: 'shadow', // PRD §10.1: start in Shadow — nothing is sent until you switch mode
+      autoReplyIntents: ['praise', 'purchase_intent'],
+      minConfidence: 0.8,
+      brandVoice: { brandName: username, tone: 'Ramah dan profesional', useEmoji: true, cta: 'Silakan DM kami ya kak!', forbiddenPhrases: [] }
+    })
+    .onConflictDoNothing({ target: schema.replyPolicies.socialAccountId });
+
+  console.log(`✓ ${platform.padEnd(9)} @${username} → social_account ${acc.id}`);
+  return acc;
+}
+
+async function main() {
+  switch (cmd) {
+    case 'pages': {
+      if (!args[0]) usage();
+      printPages(await listPagesWithInstagram(await longLived(args[0])));
+      break;
+    }
+
+    case 'connect': {
+      const [slug, token] = args;
+      if (!slug || !token) usage();
+      const ws = await db.query.workspaces.findFirst({ where: eq(schema.workspaces.slug, slug) });
+      if (!ws) throw new Error(`Workspace "${slug}" not found`);
+
+      const pages = await listPagesWithInstagram(await longLived(token));
+      printPages(pages);
+      for (const p of pages) {
+        await upsertAccount(ws.id, 'facebook', p.id, p.name, p.picture?.data?.url, p.access_token);
+        const ig = p.instagram_business_account;
+        if (ig) await upsertAccount(ws.id, 'instagram', ig.id, ig.username ?? ig.id, ig.profile_picture_url, p.access_token);
+      }
+      console.log('\nNext: run the worker (bun run dev:worker) or `poll <social_account_id>` to pull comments now.');
+      break;
+    }
+
+    case 'poll': {
+      if (!args[0]) usage();
+      console.log(await pollAccount(args[0]));
+      break;
+    }
+
+    case 'comments': {
+      if (!args[0]) usage();
+      const acc = await db.query.socialAccounts.findFirst({ where: eq(schema.socialAccounts.id, args[0]) });
+      if (!acc || !isMetaPlatform(acc.platform)) throw new Error('Meta social account not found');
+      const token = decryptToken(acc.accessTokenEnc);
+      for (const post of await MetaGraph.listPosts(acc.platform, acc.externalId, token, 5)) {
+        console.log(`\n■ ${post.externalId}  ${post.caption?.slice(0, 60) ?? ''}\n  ${post.permalink ?? ''}`);
+        for (const c of await MetaGraph.listComments(acc.platform, post.externalId, token)) {
+          console.log(`  - [${c.externalId}] ${c.authorName ?? '?'}: ${c.text}`);
+        }
+      }
+      break;
+    }
+
+    default:
+      usage();
+  }
+}
+
+main()
+  .catch((err) => {
+    console.error('✗', err.message ?? err);
+    process.exitCode = 1;
+  })
+  .finally(() => client.end());

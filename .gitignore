@@ -40,4 +40,7 @@ Thumbs.db
 
 # Vite temporary files
 vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
+.vercel
+.env*.local
+.playwright-mcp/
+
