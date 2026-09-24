@@ -1,0 +1,133 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Google Brand Identity Colors */
+  --color-google-red: #ea4335;
+  --color-google-red-hover: #d93025;
+  --color-google-red-dark: #b3261e;
+  --color-google-blue: #1a73e8;
+  --color-google-green: #1e8e3e;
+  --color-google-yellow: #f9ab00;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+/* Smooth scrolling and tap feedback */
+html {
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom soft scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.5);
+}
+
+/* Soft UI Elevation & Surface Utilities */
+.soft-card {
+  border-radius: 1rem;
+  border-width: 1px;
+  border-color: rgba(226, 232, 240, 0.7);
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 6px 16px -2px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+:where(.dark, .dark *) .soft-card {
+  border-color: rgba(30, 41, 59, 0.7);
+  background-color: rgba(17, 24, 39, 0.75);
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.35), 0 8px 24px -2px rgba(0, 0, 0, 0.3);
+}
+
+.soft-card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05), 0 12px 28px -4px rgba(15, 23, 42, 0.06);
+}
+:where(.dark, .dark *) .soft-card-hover:hover {
+  box-shadow: 0 4px 14px -1px rgba(0, 0, 0, 0.45), 0 14px 32px -4px rgba(0, 0, 0, 0.4);
+}
+
+/* Safe areas for mobile devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0.5rem);
+}
+
+/* Animated illustration motion utilities */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(0.5deg);
+  }
+}
+
+@keyframes floatReverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(8px) rotate(-0.5deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes typingBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-float-slow {
+  animation: floatSlow 5s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatReverse 6s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: floatSlow 3.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+.animate-typing-cursor {
+  animation: typingBlink 1s infinite;
+}

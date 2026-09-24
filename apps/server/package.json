@@ -1,0 +1,23 @@
+{
+  "name": "@replyra/server",
+  "version": "0.1.0",
+  "main": "./src/server.ts",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "worker": "bun --watch src/worker.ts",
+    "start": "bun src/server.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.2.0",
+    "@elysiajs/swagger": "^1.2.2",
+    "@sinclair/typebox": "^0.34.14",
+    "drizzle-orm": "^0.39.3",
+    "elysia": "^1.2.10",
+    "postgres": "^3.4.5",
+    "@replyra/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
