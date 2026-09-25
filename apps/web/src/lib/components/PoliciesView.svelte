@@ -144,6 +144,8 @@
         customBlockedKeywords: policy.customBlockedKeywords,
         autoHideSpam: policy.autoHideSpam
       });
+    } catch (err) {
+      toast.error((err as Error).message, isLangEn ? 'Simulation failed' : 'Simulasi gagal');
     } finally {
       isTestingPreview = false;
     }
@@ -472,6 +474,33 @@
         {#if previewResult}
           <div class="mt-5 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-xs dark:border-slate-800 dark:bg-slate-900 animate-in fade-in">
             <h4 class="text-xs font-bold text-slate-900 dark:text-white">Hasil Evaluasi AI:</h4>
+
+            <!-- Did a real AI model answer, or the rules fallback? -->
+            {#if previewResult.ai}
+              {@const ai = previewResult.ai}
+              {@const usedAi = previewResult.classification.model !== 'rules-only' && ai.draftModel !== 'template'}
+              <div
+                class="rounded-xl px-3 py-2 text-[11px] {usedAi
+                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : ai.configured
+                    ? 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                    : 'bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'}"
+              >
+                {#if usedAi}
+                  <p class="font-semibold">✓ AI aktif · {previewResult.classification.model}</p>
+                  <p class="opacity-80">Keyakinan {Math.round(previewResult.classification.confidence * 100)}%{#if ai.remainingUnits !== null} · sisa {ai.remainingUnits} unit AI{/if}</p>
+                {:else if !ai.configured}
+                  <p class="font-semibold">AI belum aktif: hasil di bawah dari aturan kata kunci</p>
+                  <p class="opacity-80">Isi LLM_PROVIDER + API key di server (.env) lalu restart API.</p>
+                {:else if ai.remainingUnits === 0}
+                  <p class="font-semibold">Kuota AI habis: hasil di bawah dari aturan kata kunci</p>
+                  <p class="opacity-80">Top-up unit AI di menu Kuota &amp; Paket.</p>
+                {:else}
+                  <p class="font-semibold">AI ({ai.provider}) gagal dipanggil: memakai aturan cadangan</p>
+                  {#if ai.lastError}<p class="mt-0.5 break-words font-mono opacity-80">{ai.lastError.message}</p>{/if}
+                {/if}
+              </div>
+            {/if}
 
             <!-- Classification -->
             <div class="space-y-1 text-xs">

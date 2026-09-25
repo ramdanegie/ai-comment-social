@@ -5,7 +5,7 @@ import { swagger } from '@elysiajs/swagger';
 import { db, schema } from '@replyra/db';
 import { eq, desc, and, sql, ilike, inArray } from 'drizzle-orm';
 import { ReplyPolicyEvaluator } from './contexts/response/domain/ReplyPolicyEvaluator';
-import { classifyComment, draftReply } from './contexts/moderation/application/AiModeration';
+import { aiStatus, classifyComment, draftReply } from './contexts/moderation/application/AiModeration';
 import { encryptToken, verifyMetaSignature } from './shared/infrastructure/crypto';
 import { enqueueJob } from './contexts/engagement/application/MetaIngestion';
 import {
@@ -865,7 +865,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         customKeywords: body.customBlockedKeywords || []
       });
 
-      const { text: draft } = await draftReply({
+      const { text: draft, model: draftModel } = await draftReply({
         workspaceId: workspace!.id,
         commentId: null,
         input: {
@@ -896,7 +896,8 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         classification,
         draft,
         decision,
-        postCheck
+        postCheck,
+        ai: { ...(await aiStatus(workspace!.id)), classifyModel: classification.model, draftModel }
       };
     },
     {

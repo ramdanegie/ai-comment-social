@@ -18,6 +18,23 @@ const RULES_ONLY_CONFIDENCE = 0.5;
 
 export type ModerationResult = ClassificationOutput & { model: string };
 
+/** Last provider error (message only — never contains the key), shown in the policy simulator. */
+let lastAiError: { message: string; at: string } | null = null;
+const noteAiError = (err: unknown) => {
+  lastAiError = { message: String((err as Error).message ?? err).slice(0, 300), at: new Date().toISOString() };
+};
+
+/** For the simulator: is AI configured, which provider, units left, last failure. */
+export async function aiStatus(workspaceId: string) {
+  const provider = getLlmProvider();
+  return {
+    configured: !!provider,
+    provider: provider?.name ?? null,
+    remainingUnits: await remainingAiUnits(workspaceId),
+    lastError: lastAiError
+  };
+}
+
 /** AI units left in the current period. `null` = no subscription (local dev) → unlimited. */
 export async function remainingAiUnits(workspaceId: string): Promise<number | null> {
   const status = await getBillingStatus(workspaceId);
@@ -79,6 +96,7 @@ export async function classifyComment(args: {
         model: `${usage.provider}:${usage.model}`
       };
     } catch (err) {
+      noteAiError(err);
       console.warn(`[ai] classify failed, falling back to rules: ${(err as Error).message}`);
     }
   }
@@ -105,6 +123,7 @@ export async function draftReply(args: {
       await recordUsage(args.workspaceId, args.commentId, 'generate_reply', usage);
       return { text: cleanReply(text), model: `${usage.provider}:${usage.model}` };
     } catch (err) {
+      noteAiError(err);
       console.warn(`[ai] draft failed, using template: ${(err as Error).message}`);
     }
   }
