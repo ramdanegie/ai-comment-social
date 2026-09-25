@@ -75,7 +75,7 @@ META_CODE='AQB…' bun scripts/meta-dev.ts connect-ig-code maujahit
 # ✓ Code exchanged … ✓ Long-lived Instagram token (~60 days)
 # ✓ instagram @username → social_account <id>
 
-bun scripts/meta-dev.ts comments <social_account_id>   # cek post + komentar dari Meta
+bun scripts/meta-dev.ts diagnose <social_account_id>   # jumlah komentar menurut IG vs yang dikembalikan API
 bun scripts/meta-dev.ts poll     <social_account_id>   # tarik ke Replyra
 ```
 
@@ -311,6 +311,8 @@ lalu restart worker.
 | Komentar FB tanpa nama penulis | `from` hanya dikembalikan untuk user dengan role di app saat Development Mode | Normal di dev mode; lengkap setelah Advanced Access |
 | `Invalid redirect_uri` saat tukar kode IG | `META_IG_REDIRECT_URI` beda dengan redirect saat authorize, atau belum disimpan di *Set up Instagram business login* | Samakan persis (termasuk `/` di akhir) |
 | `Invalid authorization code` / `code has been used` | Kode IG kedaluwarsa (1 jam) atau sudah dipakai | Ulangi IG-2 |
+| `diagnose` menunjukkan COUNT > RETURNED (Instagram menghitung komentar, API mengembalikan `data: []`, bahkan komentar pemilik) | **Meta app masih Unpublished.** Meta menahan isi komentar untuk app yang belum di-publish, walaupun token & izin benar | App Dashboard → **Publish**. Butuh Privacy/Terms/Data-deletion URL yang bisa diakses crawler Meta (lihat bawah) |
+| Publish gagal: *Invalid Privacy Policy URL* | Host URL privacy memblokir/rate-limit crawler Meta (mis. HTTP 429) | Pakai halaman bawaan app: `/privacy`, `/terms`, `/data-deletion` (sudah di-prerender) |
 | Poll sukses tapi `newComments: 0` | Post belum punya komentar, atau komentar dari akun sendiri (sengaja diabaikan) | Komentar dari akun lain di post terbaru |
 | Komentar baru tidak langsung masuk | Tidak ada webhook di dev mode; komentar datang lewat polling | Tunggu `META_POLL_INTERVAL_SEC` atau klik **Sinkronkan** |
 

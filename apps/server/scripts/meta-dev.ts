@@ -214,7 +214,7 @@ async function main() {
         console.log(`${post.publishedAt?.toISOString().slice(0, 10) ?? '?'}  ${String(count).padStart(5)}  ${String(comments.length).padStart(8)}  ${(post.caption ?? '').slice(0, 30)}${flag}`);
         for (const c of comments) console.log(`              ↳ @${c.authorName ?? '?'}: ${c.text.slice(0, 60)}`);
       }
-      console.log('\nCOUNT > RETURNED → Instagram counts the comments but the API withholds them (dev mode / Standard Access).');
+      console.log('\nCOUNT > RETURNED → Meta withholds comment content. Most common cause: the Meta app is Unpublished (App Dashboard → Publish).');
       break;
     }
 
