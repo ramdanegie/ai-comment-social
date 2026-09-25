@@ -5,6 +5,8 @@
 //   USER_PASSWORD='…' bun scripts/users.ts superadmin <email> ["<name>"]   (platform operator, /admin)
 //   USER_PASSWORD='…' bun scripts/users.ts set-password <email>
 //   bun scripts/users.ts workspace <slug> "<name>" [plan_id]                (default: growth, 1 month active)
+//   bun scripts/users.ts tenant <email> "<name>" <workspace_slug> "<brand>" <plan_id> [months]
+//        (owner on a paid plan, no trial; USER_PASSWORD optional — without it the user signs in with Google)
 //   bun scripts/users.ts list
 //
 // Omit USER_PASSWORD to generate a strong random password (printed once).
@@ -30,6 +32,7 @@ function usage(): never {
   USER_PASSWORD='…' bun scripts/users.ts superadmin <email> ["<name>"]
   USER_PASSWORD='…' bun scripts/users.ts set-password <email>
   bun scripts/users.ts workspace <slug> "<name>" [plan_id]
+  bun scripts/users.ts tenant <email> "<name>" <workspace_slug> "<brand>" <plan_id> [months]
   bun scripts/users.ts list`);
   process.exit(1);
 }
@@ -112,6 +115,32 @@ async function main() {
         status: planId === 'trial' ? 'trial' : 'active'
       });
       console.log(`✓ workspace ${slug} (${name}) — ${plan.name}`);
+      break;
+    }
+
+    case 'tenant': {
+      const [email, name, slug, brand, planId, monthsArg = '12'] = args;
+      const months = Number(monthsArg);
+      if (!email || !name || !slug || !brand || !planId || !/^[a-z0-9-]+$/.test(slug) || !(months >= 1)) usage();
+      const plan = await db.query.plans.findFirst({ where: eq(schema.plans.id, planId) });
+      if (!plan) throw new Error(`Plan "${planId}" not found`);
+
+      const user = (await findUserByEmail(email)) ?? (await createUser({ email, name, emailVerified: true }));
+      if (process.env.USER_PASSWORD) await setPassword(user.id, password().value);
+
+      const ws =
+        (await db.query.workspaces.findFirst({ where: eq(schema.workspaces.slug, slug) })) ??
+        (await db.insert(schema.workspaces).values({ slug, name: brand }).returning())[0];
+      await addMembership(ws.id, user.id, 'owner');
+
+      const periodEnd = new Date();
+      periodEnd.setMonth(periodEnd.getMonth() + months);
+      const values = { planId, status: 'active', periodStart: new Date(), periodEnd };
+      await db
+        .insert(schema.subscriptions)
+        .values({ workspaceId: ws.id, ...values })
+        .onConflictDoUpdate({ target: schema.subscriptions.workspaceId, set: values });
+      console.log(`✓ ${user.email} → ${slug} (owner) — ${plan.name} until ${periodEnd.toISOString().slice(0, 10)}`);
       break;
     }
 
