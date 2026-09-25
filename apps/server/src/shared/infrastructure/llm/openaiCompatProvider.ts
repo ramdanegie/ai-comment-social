@@ -1,12 +1,18 @@
-// OpenAI and DeepSeek adapter (DeepSeek exposes an OpenAI-compatible API).
-// OpenAI: strict JSON-schema structured outputs. DeepSeek: JSON mode + zod validation (no json_schema support).
+// OpenAI, Gemini and DeepSeek adapter (Gemini and DeepSeek expose OpenAI-compatible APIs).
+// OpenAI/Gemini: JSON-schema structured outputs. DeepSeek: JSON mode + zod validation (no json_schema support).
 
 import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import type { ClassifyInput, DraftReplyInput, LlmProvider } from '../../../contexts/moderation/domain/LlmPorts';
 import { CLASSIFY_SYSTEM, ClassificationSchema, REPLY_SYSTEM, classifyUserMessage, cleanReply, replyUserMessage } from './prompts';
 
-type Flavor = 'openai' | 'deepseek';
+type Flavor = 'openai' | 'gemini' | 'deepseek';
+
+const BASE_URL: Record<Flavor, string | undefined> = {
+  openai: undefined,
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+  deepseek: 'https://api.deepseek.com'
+};
 
 export function createOpenAICompatProvider(opts: {
   flavor: Flavor;
@@ -16,7 +22,7 @@ export function createOpenAICompatProvider(opts: {
 }): LlmProvider {
   const client = new OpenAI({
     apiKey: opts.apiKey,
-    baseURL: opts.flavor === 'deepseek' ? 'https://api.deepseek.com' : undefined,
+    baseURL: BASE_URL[opts.flavor],
     timeout: 30_000,
     maxRetries: 2
   });
@@ -36,7 +42,7 @@ export function createOpenAICompatProvider(opts: {
         { role: 'user', content: classifyUserMessage(input) }
       ];
 
-      if (opts.flavor === 'openai') {
+      if (opts.flavor !== 'deepseek') {
         const completion = await client.chat.completions.parse({
           model: opts.classifyModel,
           messages,
@@ -67,7 +73,8 @@ export function createOpenAICompatProvider(opts: {
           { role: 'system', content: REPLY_SYSTEM },
           { role: 'user', content: replyUserMessage(input) }
         ],
-        max_tokens: 300
+        // Gemini counts thinking tokens against the limit; leave headroom so the reply isn't cut off.
+        max_tokens: opts.flavor === 'gemini' ? 1024 : 300
       });
       const text = completion.choices[0]?.message.content ?? '';
       if (!text.trim()) throw new Error('Empty reply draft');

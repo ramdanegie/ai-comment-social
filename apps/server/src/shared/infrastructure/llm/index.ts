@@ -1,8 +1,9 @@
 // Provider selection from env (PRD §13). Returns null when AI isn't configured → rule-only mode (FR-9).
 //
-//   LLM_PROVIDER=anthropic | openai | deepseek
-//   ANTHROPIC_API_KEY / OPENAI_API_KEY / DEEPSEEK_API_KEY
-//   LLM_MODEL_CLASSIFY, LLM_MODEL_REPLY   (optional for anthropic/deepseek, required for openai)
+//   LLM_PROVIDER=anthropic | openai | gemini | deepseek
+//   ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY / DEEPSEEK_API_KEY
+//   LLM_MODEL_CLASSIFY, LLM_MODEL_REPLY   (optional for anthropic/gemini/deepseek, required for openai)
+//   Note: on the Gemini free tier Google may use submitted content to improve its products.
 //   LLM_PRICE_INPUT_PER_MTOK, LLM_PRICE_OUTPUT_PER_MTOK  (USD, for usage metering; defaults per provider)
 
 import type { LlmProvider, LlmUsage } from '../../../contexts/moderation/domain/LlmPorts';
@@ -11,6 +12,7 @@ import { createOpenAICompatProvider } from './openaiCompatProvider';
 
 const DEFAULT_MODEL: Record<string, string | undefined> = {
   anthropic: 'claude-haiku-4-5',
+  gemini: 'gemini-3.1-flash-lite',
   deepseek: 'deepseek-chat',
   openai: undefined // model names change often — set LLM_MODEL_CLASSIFY / LLM_MODEL_REPLY explicitly
 };
@@ -38,9 +40,11 @@ export function getLlmProvider(): LlmProvider | null {
       ? process.env.ANTHROPIC_API_KEY
       : provider === 'openai'
         ? process.env.OPENAI_API_KEY
-        : provider === 'deepseek'
-          ? process.env.DEEPSEEK_API_KEY
-          : undefined;
+        : provider === 'gemini'
+          ? process.env.GEMINI_API_KEY
+          : provider === 'deepseek'
+            ? process.env.DEEPSEEK_API_KEY
+            : undefined;
 
   if (!provider || !key) {
     cached = null;
@@ -58,7 +62,7 @@ export function getLlmProvider(): LlmProvider | null {
   cached =
     provider === 'anthropic'
       ? createAnthropicProvider({ apiKey: key, classifyModel, replyModel })
-      : createOpenAICompatProvider({ flavor: provider as 'openai' | 'deepseek', apiKey: key, classifyModel, replyModel });
+      : createOpenAICompatProvider({ flavor: provider as 'openai' | 'gemini' | 'deepseek', apiKey: key, classifyModel, replyModel });
   return cached;
 }
 

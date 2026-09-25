@@ -37,6 +37,21 @@
   const HIGH_RISK = ['threat', 'hate', 'toxic'];
   const PLATFORM_LABEL: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok' };
 
+  const AVATAR_TONES = [
+    'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+    'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
+    'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+    'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+    'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300',
+    'bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300'
+  ];
+  /** Stable pastel tone per author so the list is easy to scan. */
+  function avatarTone(name: string) {
+    let h = 0;
+    for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    return AVATAR_TONES[Math.abs(h) % AVATAR_TONES.length];
+  }
+
   let queue: CommentItem[] = $state([]);
   let loading = $state(true);
   let processingId = $state<string | null>(null);
@@ -193,6 +208,12 @@
   {/if}
 {/snippet}
 
+{#snippet avatar(name: string, size = 'h-9 w-9 text-sm')}
+  <span class="flex shrink-0 items-center justify-center rounded-full font-semibold uppercase {size} {avatarTone(name)}">
+    {name.replace(/[^a-z0-9]/gi, '').charAt(0) || '?'}
+  </span>
+{/snippet}
+
 {#snippet kbd(k: string)}
   <kbd class="rounded border border-slate-200 bg-slate-50 px-1 font-mono text-[10px] text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">{k}</kbd>
 {/snippet}
@@ -261,7 +282,7 @@
     <div class="grid gap-4 lg:grid-cols-[22rem_1fr] lg:items-start">
       <!-- List -->
       <ul
-        class="soft-card divide-y divide-slate-100 overflow-hidden p-0 dark:divide-slate-800 lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto {mobileShowDetail ? 'hidden lg:block' : ''}"
+        class="soft-card space-y-1 p-2 lg:max-h-[calc(100dvh-12rem)] lg:overflow-y-auto {mobileShowDetail ? 'hidden lg:block' : ''}"
         aria-label={isLangEn ? 'Comments to review' : 'Komentar untuk ditinjau'}
       >
         {#each queue as item (item.id)}
@@ -272,18 +293,22 @@
               type="button"
               onclick={() => select(item.id)}
               aria-current={active}
-              class="relative flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors {active
-                ? 'bg-brand-50/70 dark:bg-brand-500/10'
+              class="flex w-full gap-3 rounded-xl px-3 py-3 text-left transition {active
+                ? 'bg-slate-100 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700'
                 : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}"
             >
-              {#if active}<span class="absolute inset-y-0 left-0 w-0.5 bg-brand-500"></span>{/if}
-              <div class="flex items-center gap-2 text-xs">
-                <span class="text-slate-400">{@render platformIcon(item.platform)}</span>
+              {@render avatar(item.authorName)}
+              <div class="min-w-0 flex-1 space-y-1">
+              <div class="flex items-center gap-1.5 text-xs">
                 <span class="truncate font-semibold text-slate-900 dark:text-white">@{item.authorName}</span>
-                <span class="ml-auto shrink-0 text-slate-400">{timeAgo(item.commentedAt, isLangEn)}</span>
+                {#if risky}<span class="h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" aria-hidden="true"></span>{/if}
+                <span class="ml-auto flex shrink-0 items-center gap-1 text-slate-400">
+                  {@render platformIcon(item.platform, 'h-3 w-3')}
+                  {timeAgo(item.commentedAt, isLangEn)}
+                </span>
               </div>
-              <p class="line-clamp-2 text-sm text-slate-600 dark:text-slate-300">{item.text}</p>
-              <div class="flex flex-wrap gap-1">
+              <p class="line-clamp-2 text-sm leading-snug text-slate-600 dark:text-slate-300">{item.text}</p>
+              <div class="flex flex-wrap gap-1 pt-0.5">
                 {#if item.classification}
                   {#if item.classification.riskLabel !== 'none'}
                     <Badge type="risk" value={item.classification.riskLabel} />
@@ -294,6 +319,7 @@
                 {#if risky}
                   <span class="sr-only">{isLangEn ? 'high risk' : 'risiko tinggi'}</span>
                 {/if}
+              </div>
               </div>
             </button>
           </li>
@@ -319,14 +345,17 @@
 
             <!-- Author + meta -->
             <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p class="text-base font-semibold text-slate-900 dark:text-white">@{selected.authorName}</p>
-                <p class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+              <div class="flex min-w-0 items-center gap-3">
+                {@render avatar(selected.authorName, 'h-11 w-11 text-base')}
+                <div class="min-w-0">
+                <p class="truncate text-base font-semibold text-slate-900 dark:text-white">@{selected.authorName}</p>
+                <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                   {@render platformIcon(selected.platform)}
                   {PLATFORM_LABEL[selected.platform]}
                   {#if selected.account?.username}· {selected.account.username}{/if}
                   · {new Date(selected.commentedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
+                </div>
               </div>
               {#if cls}
                 <div class="flex flex-wrap items-center gap-1.5">
@@ -334,17 +363,17 @@
                   <Badge type="intent" value={cls.intent} />
                   {#if cls.riskLabel !== 'none'}<Badge type="risk" value={cls.riskLabel} />{/if}
                   <span
-                    class="rounded-full bg-slate-100 px-2 py-0.5 font-mono text-[11px] text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600 tabular-nums dark:bg-slate-800 dark:text-slate-300"
                     title={isLangEn ? 'AI confidence' : 'Keyakinan AI'}
                   >
-                    {Math.round(cls.confidence * 100)}%
+                    {isLangEn ? 'Confidence' : 'Keyakinan'} {Math.round(cls.confidence * 100)}%
                   </span>
                 </div>
               {/if}
             </div>
 
             <!-- The comment -->
-            <blockquote class="border-l-2 border-slate-300 pl-4 text-[15px] leading-relaxed text-slate-900 dark:border-slate-600 dark:text-slate-100">
+            <blockquote class="rounded-2xl rounded-tl-sm bg-slate-100 px-4 py-3 text-[15px] leading-relaxed text-slate-900 dark:bg-slate-800 dark:text-slate-100">
               {selected.text}
             </blockquote>
 
@@ -376,14 +405,16 @@
 
             <!-- Post context -->
             {#if selected.post}
-              <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-2.5 pr-3.5 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 {#if selected.post.mediaUrl}
-                  <img src={selected.post.mediaUrl} alt="" class="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                  <img src={selected.post.mediaUrl} alt="" class="h-12 w-12 shrink-0 rounded-lg object-cover" />
                 {/if}
-                <p class="min-w-0 flex-1 line-clamp-2">
-                  <span class="font-medium text-slate-700 dark:text-slate-300">{isLangEn ? 'On post:' : 'Di post:'}</span>
-                  {selected.post.caption}
-                </p>
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-slate-700 dark:text-slate-300">{isLangEn ? 'Commented on post' : 'Komentar di post'}</p>
+                  <p class="mt-0.5 line-clamp-2 {selected.post.caption ? '' : 'italic text-slate-400'}">
+                    {selected.post.caption || (isLangEn ? 'No caption' : 'Tanpa caption')}
+                  </p>
+                </div>
                 {#if selected.post.permalink}
                   <a
                     href={selected.post.permalink}
@@ -426,7 +457,7 @@
           </div>
 
           <!-- Actions -->
-          <div class="review-actions sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/95 px-5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 lg:static lg:bg-slate-50/60 lg:backdrop-blur-none">
+          <div class="review-actions sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/95 px-5 py-3.5 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 lg:static lg:bg-slate-50/60 lg:backdrop-blur-none">
             <button
               type="button"
               onclick={handleDismiss}
