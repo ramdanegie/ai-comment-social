@@ -106,7 +106,9 @@
 </script>
 
 <svelte:head>
-  <title>{PAGES[activePage][session.isLangEn ? 'labelEn' : 'labelId']} · Replyra</title>
+  {#if !page.url.pathname.startsWith('/admin')}
+    <title>{PAGES[activePage][session.isLangEn ? 'labelEn' : 'labelId']} · Replyra</title>
+  {/if}
 </svelte:head>
 
 <div class="app-shell flex min-h-dvh flex-col text-slate-800 dark:text-slate-100">
@@ -130,13 +132,14 @@
       isLangEn={session.isLangEn}
       currentRole={session.role}
       currentUser={session.user}
+      isSuperadmin={!!session.user?.isSuperadmin}
       workspaceName={session.workspaces.find((w) => w.slug === session.workspace)?.name ?? ''}
       onLogout={() => (isLogoutModalOpen = true)}
     />
 
     <main id="main-content" tabindex="-1" class="app-content min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
       <div class="mx-auto max-w-7xl">
-        {#if session.workspace}
+        {#if session.workspace || page.url.pathname.startsWith('/admin')}
           {@render children()}
         {:else if session.isAuthenticated}
           <div class="mx-auto mt-16 max-w-md rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">

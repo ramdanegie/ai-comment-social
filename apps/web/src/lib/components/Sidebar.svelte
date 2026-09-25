@@ -11,7 +11,8 @@
     Settings,
     LogOut,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    ShieldCheck
   } from 'lucide-svelte';
   import type { UserRole } from '../types';
   import { pathFor } from '../nav';
@@ -24,6 +25,7 @@
     currentRole = 'owner' as UserRole,
     currentUser = null,
     workspaceName = '',
+    isSuperadmin = false,
     onSelectPage = () => {},
     onLogout = () => {}
   }: {
@@ -34,6 +36,7 @@
     currentRole?: UserRole;
     currentUser?: { id?: string; name?: string; email?: string } | null;
     workspaceName?: string;
+    isSuperadmin?: boolean;
     onSelectPage?: (page: string) => void;
     onLogout?: () => void;
   } = $props();
@@ -194,6 +197,17 @@
         {/if}
       {/each}
     </nav>
+
+    {#if isSuperadmin}
+      <a
+        href="/admin"
+        class="mt-4 flex items-center gap-3 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-brand-500 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300"
+        title="Superadmin"
+      >
+        <ShieldCheck class="h-4 w-4 shrink-0" />
+        {#if !isCollapsed}<span>Superadmin</span>{/if}
+      </a>
+    {/if}
   </div>
 
   <!-- Bottom Pinned Section: AI Quota + User Profile + Logout (Permanently at bottom-left) -->

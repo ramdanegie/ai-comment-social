@@ -7,7 +7,8 @@
 #
 # Layout on the server (under ~/<BASE_DIR>, default repositories/ai-comment-social):
 #   api/         Node app root (Passenger) + cron worker; api/.env lives only on the server
-#   api/public/  document root of replyra-api.creativeshine.id
+#   api-public/  document root of replyra-api.creativeshine.id (must be OUTSIDE api/ — LiteSpeed
+#                won't start a Node app whose document root is inside its app root)
 #   web/         document root of replyra.creativeshine.id (static build)
 #
 # Config: apps/server/.env.deploy (git-ignored): SSH_USER, SSH_HOST, SSH_PORT, BASE_DIR, WEB_API_URL
@@ -26,11 +27,11 @@ RSYNC=(rsync -az --delete -e "ssh -p $SSH_PORT")
 if [[ "$TARGET" == all || "$TARGET" == api ]]; then
   ./scripts/build-node.sh
   echo "▸ API → $SSH_HOST:~/$BASE_DIR/api"
-  "${SSH[@]}" "mkdir -p ~/$BASE_DIR/api/public ~/$BASE_DIR/api/tmp ~/$BASE_DIR/api/logs"
-  "${RSYNC[@]}" --exclude '.env' --exclude 'tmp/' --exclude 'logs/' --exclude 'public/' --exclude 'node_modules/' \
-    --exclude '.htaccess' --exclude 'stderr.log' release/ "$SSH_USER@$SSH_HOST:$BASE_DIR/api/"
+  "${SSH[@]}" "mkdir -p ~/$BASE_DIR/api/tmp ~/$BASE_DIR/api/logs"
+  "${RSYNC[@]}" --exclude '.env' --exclude 'tmp/' --exclude 'logs/' --exclude 'node_modules/' --exclude 'stderr.log' release/ "$SSH_USER@$SSH_HOST:$BASE_DIR/api/"
   "${SSH[@]}" "set -e; cd ~/$BASE_DIR/api
-    NODE=\$(ls -d /opt/alt/alt-nodejs22/root/usr/bin/node /opt/alt/alt-nodejs24/root/usr/bin/node 2>/dev/null | head -1)
+    # Same Node as Passenger: the cPanel app virtualenv (~/nodevenv/<app root>/<version>/bin/node)
+    NODE=\$(ls -d ~/nodevenv/$BASE_DIR/api/*/bin/node /opt/alt/alt-nodejs24/root/usr/bin/node /opt/alt/alt-nodejs22/root/usr/bin/node 2>/dev/null | head -1)
     test -f .env || { echo '✗ ~/$BASE_DIR/api/.env missing'; exit 1; }
     \$NODE dist/migrate.cjs
     touch tmp/restart.txt

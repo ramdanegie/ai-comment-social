@@ -4,8 +4,8 @@
 //    configured / the call fails) we fall back to rules only and force human review (low confidence).
 
 import { db, schema } from '@replyra/db';
-import { and, eq, gte, sql } from 'drizzle-orm';
 import { RulePrefilter } from '../domain/RulePrefilter';
+import { getBillingStatus } from '../../billing/application/Billing';
 import { LlmClassifier, type ClassificationOutput } from '../domain/LlmClassifier';
 import { LlmReplyGenerator } from '../../response/domain/LlmReplyGenerator';
 import type { DraftReplyInput, LlmUsage, RiskLabel } from '../domain/LlmPorts';
@@ -18,16 +18,10 @@ const RULES_ONLY_CONFIDENCE = 0.5;
 
 export type ModerationResult = ClassificationOutput & { model: string };
 
-/** AI units left in the current period (plan + top-up − used). `null` = no subscription → unlimited (dev). */
+/** AI units left in the current period. `null` = no subscription (local dev) → unlimited. */
 export async function remainingAiUnits(workspaceId: string): Promise<number | null> {
-  const sub = await db.query.subscriptions.findFirst({ where: eq(schema.subscriptions.workspaceId, workspaceId) });
-  if (!sub) return null;
-  const plan = await db.query.plans.findFirst({ where: eq(schema.plans.id, sub.planId) });
-  const [row] = await db
-    .select({ used: sql<number>`coalesce(sum(${schema.usageEvents.units}), 0)::int` })
-    .from(schema.usageEvents)
-    .where(and(eq(schema.usageEvents.workspaceId, workspaceId), gte(schema.usageEvents.createdAt, sub.periodStart)));
-  return (plan?.monthlyAiUnits ?? 0) + sub.extraAiUnits - (row?.used ?? 0);
+  const status = await getBillingStatus(workspaceId);
+  return status ? status.remainingUnits : null;
 }
 
 async function recordUsage(workspaceId: string, commentId: string | null, kind: string, usage: LlmUsage) {

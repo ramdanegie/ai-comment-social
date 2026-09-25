@@ -39,7 +39,28 @@
   let email = $state('');
   let password = $state('');
   let isLoading = $state(false);
+  let isGoogleLoading = $state(false);
   let errorMessage = $state<string | null>(null);
+
+  async function handleGoogleLogin() {
+    if (isLoading || isGoogleLoading) return;
+    isGoogleLoading = true;
+    errorMessage = null;
+    try {
+      const authBase = api.authBaseUrl || 'http://localhost:3099';
+      const callbackURL = `${window.location.origin}/login`;
+      window.location.href = `${authBase}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+    } catch (err: any) {
+      errorMessage = isLangEn
+        ? 'Google sign-in requires GOOGLE_CLIENT_ID configured on server.'
+        : 'Login Google memerlukan konfigurasi GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET di server.';
+      toast.info(errorMessage);
+    } finally {
+      setTimeout(() => {
+        isGoogleLoading = false;
+      }, 2000);
+    }
+  }
 
   async function handleSubmit(e?: SubmitEvent) {
     e?.preventDefault();
@@ -435,23 +456,54 @@
           </div>
         {/if}
 
-        <div class="mt-5"></div>
+        <!-- Google Sign-In Button -->
+        <div class="mt-5">
+          <button
+            type="button"
+            disabled={isLoading || isGoogleLoading}
+            onclick={handleGoogleLogin}
+            class="flex h-10 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200/90 bg-white/90 px-4 text-xs font-semibold text-slate-700 shadow-2xs backdrop-blur-sm transition hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-800/90 dark:text-slate-200 dark:hover:bg-slate-700/80 disabled:opacity-60 active:scale-98"
+          >
+            {#if isGoogleLoading}
+              <div class="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-transparent"></div>
+              <span>{isLangEn ? 'Connecting to Google...' : 'Menghubungkan ke Google...'}</span>
+            {:else}
+              <svg class="h-4 w-4" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              <span>{isLangEn ? 'Sign in with Google' : 'Masuk dengan Google'}</span>
+            {/if}
+          </button>
+        </div>
+
+        <!-- Divider -->
+        <div class="relative my-4 flex items-center justify-center">
+          <div class="w-full border-t border-slate-200/80 dark:border-slate-800/80"></div>
+          <span class="absolute bg-white px-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+            {isLangEn ? 'or with email' : 'atau dengan email'}
+          </span>
+        </div>
+
         <!-- Standard Email/Password Form -->
         <form onsubmit={handleSubmit} class="space-y-3.5">
           <div>
             <label for="loginEmail" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Email
+              {isLangEn ? 'Email or Username' : 'Email atau Username'}
             </label>
             <div class="relative mt-1">
               <Mail class="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <input
                 id="loginEmail"
-                type="email"
+                type="text"
                 bind:value={email}
                 autocomplete="username"
                 inputmode="email"
+                placeholder={isLangEn ? 'name@company.com or username' : 'nama@bisnis.id atau email'}
                 required
-                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
+                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
           </div>
@@ -467,8 +519,9 @@
                 type="password"
                 bind:value={password}
                 autocomplete="current-password"
+                placeholder={isLangEn ? 'Enter your password' : 'Kata sandi akun Anda'}
                 required
-                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
+                class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 placeholder:text-slate-400 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100 dark:placeholder:text-slate-500"
               />
             </div>
           </div>
@@ -488,6 +541,13 @@
             {/if}
           </button>
         </form>
+
+        <p class="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">
+          {isLangEn ? "Don't have an account?" : 'Belum punya akun?'}
+          <a href="/register" class="font-semibold text-brand-600 hover:underline dark:text-brand-400">
+            {isLangEn ? 'Start free trial' : 'Daftar & coba gratis'}
+          </a>
+        </p>
 
         <!-- Footnote Status Badge -->
         <div class="mt-5 flex items-center justify-between border-t border-slate-100/60 pt-3.5 text-[11px] text-slate-400 dark:border-slate-800/60 dark:text-slate-500">

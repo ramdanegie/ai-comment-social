@@ -22,3 +22,9 @@ export function timeAgo(iso: string | Date, en = false): string {
 export function formatNumber(n: number): string {
   return n.toLocaleString('id-ID');
 }
+
+const IDR = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
+export const formatIdr = (n: number) => IDR.format(n);
+
+export const formatDate = (iso: string | Date, en = false) =>
+  new Date(iso).toLocaleDateString(en ? 'en-GB' : 'id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' });

@@ -10,7 +10,15 @@ export type Role = 'viewer' | 'admin' | 'owner';
 const RANK: Record<Role, number> = { viewer: 0, admin: 1, owner: 2 };
 
 /** Reachable without a session. */
-const PUBLIC = [/^\/health$/, /^\/swagger(\/|$)/, /^\/api\/auth\//, /^\/webhooks\//, /^\/api\/v1\/plans$/];
+const PUBLIC = [
+  /^\/health$/,
+  /^\/swagger(\/|$)/,
+  /^\/api\/auth\//,
+  /^\/webhooks\//,
+  /^\/api\/v1\/plans$/,
+  /^\/api\/v1\/pricing$/,
+  /^\/api\/v1\/register$/
+];
 
 /** Minimum role per workspace route; first match wins. Default: GET → viewer, writes → admin. */
 const RULES: Array<{ method: string; path: RegExp; role: Role }> = [
@@ -58,6 +66,15 @@ export const authGuard = new Elysia({ name: 'auth-guard' })
     if (!session) {
       set.status = 401;
       return { error: 'Unauthorized' };
+    }
+
+    // Platform administration (prices, all workspaces, all payments).
+    if (path.startsWith('/api/v1/admin/') || path === '/api/v1/admin') {
+      if (!(session.user as { isSuperadmin?: boolean }).isSuperadmin) {
+        set.status = 403;
+        return { error: 'Superadmin only' };
+      }
+      return;
     }
 
     const m = path.match(WS_PATH);

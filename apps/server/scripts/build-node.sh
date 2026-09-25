@@ -25,7 +25,26 @@ cp -R ../../packages/db/drizzle "$OUT/drizzle"
 
 cat > "$OUT/app.js" <<'JS'
 // Passenger startup file (cPanel → Setup Node.js App).
-require('./dist/server.cjs');
+// This file is NOT bundled, so __dirname is the real app root — Passenger may start us with another cwd.
+process.env.APP_ROOT = process.env.APP_ROOT || __dirname;
+const fs = require('node:fs');
+const logFile = __dirname + '/logs/app.log';
+const log = (msg) => {
+  try {
+    fs.mkdirSync(__dirname + '/logs', { recursive: true });
+    fs.appendFileSync(logFile, `[${new Date().toISOString()}] ${msg}\n`);
+  } catch {}
+};
+log(`boot pid=${process.pid} node=${process.version} cwd=${process.cwd()} PORT=${process.env.PORT || '-'}`);
+process.on('uncaughtException', (e) => log(`uncaughtException: ${(e && e.stack) || e}`));
+process.on('unhandledRejection', (e) => log(`unhandledRejection: ${(e && e.stack) || e}`));
+try {
+  require('./dist/server.cjs');
+} catch (err) {
+  // Passenger's own log isn't readable on shared hosting: keep the reason next to the app.
+  log(`startup failed: ${(err && err.stack) || err}`);
+  throw err;
+}
 JS
 
 cat > "$OUT/package.json" <<'JSON'

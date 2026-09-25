@@ -13,7 +13,7 @@ const KEYS = {
   workspace: 'replyra_workspace'
 } as const;
 
-export type SessionUser = { id?: string; name?: string; email?: string; avatarUrl?: string } | null;
+export type SessionUser = { id?: string; name?: string; email?: string; avatarUrl?: string; isSuperadmin?: boolean } | null;
 
 export type WorkspaceMembership = Me['workspaces'][number];
 
@@ -105,6 +105,7 @@ export function toggleLang() {
 }
 
 export async function refreshReviewCount() {
+  if (!session.workspace) return; // e.g. superadmin without a workspace
   try {
     session.pendingReviewCount = (await api.getReviewQueue(session.workspace)).length;
   } catch {

@@ -29,13 +29,27 @@ export const auth = betterAuth({
   }),
   user: {
     // Existing `users` table: avatar lives in avatar_url.
-    fields: { image: 'avatarUrl' }
+    fields: { image: 'avatarUrl' },
+    additionalFields: {
+      // Platform operator flag — exposed on the session, never accepted from clients.
+      isSuperadmin: { type: 'boolean', required: false, defaultValue: false, input: false }
+    }
   },
   emailAndPassword: {
     enabled: true,
     // Accounts are provisioned by an owner (invite) or the seed; no open self sign-up yet.
     disableSignUp: process.env.AUTH_ALLOW_SIGNUP !== 'true',
     minPasswordLength: 10
+  },
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET
+          }
+        }
+      : {})
   },
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days

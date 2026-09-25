@@ -6,7 +6,7 @@ import { db, schema } from '@replyra/db';
 import { eq, desc, and, sql, ilike, inArray } from 'drizzle-orm';
 import { ReplyPolicyEvaluator } from './contexts/response/domain/ReplyPolicyEvaluator';
 import { classifyComment, draftReply } from './contexts/moderation/application/AiModeration';
-import { encryptToken, verifyMetaSignature, verifyMidtransSignature } from './shared/infrastructure/crypto';
+import { encryptToken, verifyMetaSignature } from './shared/infrastructure/crypto';
 import { enqueueJob } from './contexts/engagement/application/MetaIngestion';
 import {
   buildInstagramAuthUrl,
@@ -14,6 +14,16 @@ import {
   exchangeInstagramCode,
   verifyState
 } from './contexts/channel/application/ConnectInstagram';
+import {
+  createCheckout,
+  getBillingStatus,
+  listPublicPricing,
+  startTrial,
+  syncPayment,
+  verifyMidtransSignature as verifyBillingSignature
+} from './contexts/billing/application/Billing';
+import { RegistrationError, registerTenant } from './contexts/identity/application/Accounts';
+import { adminRoutes } from './contexts/billing/presentation/adminRoutes';
 import { auth } from './shared/infrastructure/auth';
 import { authGuard } from './shared/http/authGuard';
 
@@ -23,6 +33,19 @@ const WEB_ORIGINS = (process.env.WEB_ORIGINS || 'http://localhost:5173,http://12
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+/** Public web app URL (Midtrans finish redirect). */
+/** Sign-up throttle: 5 per IP per hour (in-memory; one API process on shared hosting). */
+const signupHits = new Map<string, number[]>();
+function allowSignup(ip: string) {
+  const now = Date.now();
+  const hits = (signupHits.get(ip) ?? []).filter((t) => now - t < 3_600_000);
+  if (hits.length >= 5) return false;
+  hits.push(now);
+  signupHits.set(ip, hits);
+  return true;
+}
+
+const WEB_URL = (process.env.WEB_URL || WEB_ORIGINS[0] || 'http://localhost:5173').replace(/\/$/, '');
 
 // Bun locally/VPS; Node on cPanel shared hosting (Passenger) — see src/node/*.
 export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } : {})
@@ -43,6 +66,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     return auth.handler(request);
   })
   .use(authGuard)
+  .use(adminRoutes)
   .use(
     swagger({
       documentation: {
@@ -61,6 +85,36 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     service: 'replyra-api',
     runtime: 'bun'
   }))
+
+  // Public SaaS sign-up → user (owner) + workspace on a trial (Shadow mode, PRD decision 6).
+  .post(
+    '/api/v1/register',
+    async ({ body, request, set }) => {
+      const ip = (request.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || 'unknown';
+      if (!allowSignup(ip)) {
+        set.status = 429;
+        return { error: 'Terlalu banyak pendaftaran dari jaringan ini. Coba lagi nanti.' };
+      }
+      try {
+        const { workspace } = await registerTenant(body);
+        return { success: true, workspace: { slug: workspace.slug, name: workspace.name } };
+      } catch (err) {
+        if (err instanceof RegistrationError) {
+          set.status = 400;
+          return { error: err.message };
+        }
+        throw err;
+      }
+    },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 2, maxLength: 80 }),
+        email: t.String({ format: 'email', maxLength: 160 }),
+        password: t.String({ minLength: 10, maxLength: 200 }),
+        brandName: t.String({ minLength: 2, maxLength: 80 })
+      })
+    }
+  )
 
   // Signed-in user + their workspaces/roles (replaces the old demo login endpoints)
   .get('/api/v1/me', async ({ session }) => {
@@ -106,17 +160,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         })
         .returning();
 
-      // Create trial subscription
-      const periodEnd = new Date();
-      periodEnd.setDate(periodEnd.getDate() + 14);
-      await db.insert(schema.subscriptions).values({
-        workspaceId: ws.id,
-        planId: 'growth',
-        periodStart: new Date(),
-        periodEnd,
-        extraAiUnits: 250,
-        status: 'trial'
-      });
+      await startTrial(ws.id);
 
       // Creator becomes owner.
       await db.insert(schema.memberships).values({ workspaceId: ws.id, userId: session!.user.id, role: 'owner' });
@@ -271,6 +315,20 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         if (body.state && verifyState(body.state) !== ws.slug) throw new Error('OAuth state belongs to another workspace');
 
         const { token, expiresAt } = await exchangeInstagramCode(body.code);
+
+        // Plan limit on connected accounts (counts every account already in the workspace).
+        const billing = await getBillingStatus(ws.id);
+        if (billing?.plan) {
+          const existing = await db
+            .select({ id: schema.socialAccounts.id })
+            .from(schema.socialAccounts)
+            .where(eq(schema.socialAccounts.workspaceId, ws.id));
+          if (existing.length >= billing.plan.maxSocialAccounts) {
+            set.status = 402;
+            return { error: `Paket ${billing.plan.name} maksimal ${billing.plan.maxSocialAccounts} akun. Upgrade paket untuk menambah akun.` };
+          }
+        }
+
         const account = await connectInstagramAccount(ws.id, token, expiresAt);
 
         await db.insert(schema.auditLogs).values({
@@ -518,7 +576,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
   // Approve draft (shortcut A)
   .post(
     '/api/v1/workspaces/:ws/review/:commentId/approve',
-    async ({ session, params, body }) => {
+    async ({ session, params, body, set }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -534,6 +592,12 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         where: and(eq(schema.comments.id, params.commentId as any), eq(schema.comments.workspaceId, ws.id))
       });
       if (!comment) throw new Error('Comment not found');
+
+      const blocked = await publishBlockedReason(ws.id);
+      if (blocked) {
+        set.status = 402;
+        return { error: blocked };
+      }
 
       if (existingReply?.externalReplyId) {
         return { success: true, status: 'REPLIED' }; // invariant §4.3-3: one reply per comment
@@ -632,9 +696,14 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
   })
 
   // Hide comment (shortcut H)
-  .post('/api/v1/workspaces/:ws/review/:commentId/hide', async ({ session, params }) => {
+  .post('/api/v1/workspaces/:ws/review/:commentId/hide', async ({ session, params, set }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
+    const blocked = await publishBlockedReason(ws.id);
+    if (blocked) {
+      set.status = 402;
+      return { error: blocked };
+    }
 
     const comment = await db.query.comments.findFirst({
       where: and(eq(schema.comments.id, params.commentId as any), eq(schema.comments.workspaceId, ws.id))
@@ -683,7 +752,14 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
   })
 
   // 5. Reply Policy GET / PUT / Preview
-  .get('/api/v1/workspaces/:ws/accounts/:id/policy', async ({ session, params }) => {
+  .get('/api/v1/workspaces/:ws/accounts/:id/policy', async ({ session, params, workspace, set }) => {
+    const account = await db.query.socialAccounts.findFirst({
+      where: and(eq(schema.socialAccounts.id, params.id as any), eq(schema.socialAccounts.workspaceId, workspace!.id))
+    });
+    if (!account) {
+      set.status = 404;
+      return { error: 'Account not found' };
+    }
     const policy = await db.query.replyPolicies.findFirst({
       where: eq(schema.replyPolicies.socialAccountId, params.id as any)
     });
@@ -692,9 +768,29 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
 
   .put(
     '/api/v1/workspaces/:ws/accounts/:id/policy',
-    async ({ session, params, body }) => {
+    async ({ session, params, body, membership, set }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
+
+      // Tenant scoping: the account must belong to this workspace.
+      const account = await db.query.socialAccounts.findFirst({
+        where: and(eq(schema.socialAccounts.id, params.id as any), eq(schema.socialAccounts.workspaceId, ws.id))
+      });
+      if (!account) {
+        set.status = 404;
+        return { error: 'Account not found' };
+      }
+      if (body.mode === 'auto' && membership?.role !== 'owner') {
+        set.status = 403;
+        return { error: 'Hanya owner yang boleh mengaktifkan mode Auto' };
+      }
+      if (body.mode !== 'shadow') {
+        const blocked = await publishBlockedReason(ws.id);
+        if (blocked) {
+          set.status = 402;
+          return { error: blocked };
+        }
+      }
 
       const [updated] = await db
         .update(schema.replyPolicies)
@@ -940,91 +1036,66 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     return csv;
   })
 
-  // 8. Billing & Plans (PRD §5.1 FR-9, §10)
-  .get('/api/v1/plans', async () => {
-    return await db.query.plans.findMany();
-  })
+  // 8. Billing & Plans (PRD §5.1 FR-9, §3.5) — prices come from the DB (set by superadmin)
+  .get('/api/v1/plans', async () => (await listPublicPricing()).plans)
+  .get('/api/v1/pricing', () => listPublicPricing())
 
-  .get('/api/v1/workspaces/:ws/billing', async ({ session, params }) => {
-    const ws = await getWorkspaceBySlugOrId(params.ws);
-    if (!ws) throw new Error('Workspace not found');
-
-    const sub = await db.query.subscriptions.findFirst({
-      where: eq(schema.subscriptions.workspaceId, ws.id)
-    });
-    const plan = sub ? await db.query.plans.findFirst({ where: eq(schema.plans.id, sub.planId) }) : null;
-
-    // Usage count this month
-    const usage = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(schema.usageEvents)
-      .where(eq(schema.usageEvents.workspaceId, ws.id));
-
-    const usedUnits = Number(usage[0]?.count || 0);
-    const totalUnits = (plan?.monthlyAiUnits || 1000) + (sub?.extraAiUnits || 0);
-
-    const payments = await db.query.payments.findMany({
-      where: eq(schema.payments.workspaceId, ws.id),
-      orderBy: [desc(schema.payments.createdAt)]
-    });
-
-    return {
-      subscription: sub,
-      plan,
-      usedUnits,
-      totalUnits,
-      percentUsed: Math.min(100, Math.round((usedUnits / totalUnits) * 100)),
-      paymentHistory: payments
-    };
+  .get('/api/v1/workspaces/:ws/billing', async ({ workspace }) => {
+    const [status, payments] = await Promise.all([
+      getBillingStatus(workspace!.id),
+      db.query.payments.findMany({
+        where: eq(schema.payments.workspaceId, workspace!.id),
+        orderBy: [desc(schema.payments.createdAt)],
+        limit: 50
+      })
+    ]);
+    return { status, payments, pricing: await listPublicPricing(), paymentsEnabled: !!process.env.MIDTRANS_SERVER_KEY };
   })
 
   .post(
     '/api/v1/workspaces/:ws/billing/checkout',
-    async ({ session, params, body }) => {
-      const ws = await getWorkspaceBySlugOrId(params.ws);
-      if (!ws) throw new Error('Workspace not found');
-
-      const orderId = `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
-      let amount = 799000;
-      if (body.kind === 'top_up') {
-        amount = (body.aiUnits || 500) * 300; // Rp 150.000 per 500 unit
-      } else if (body.planId === 'starter') {
-        amount = 299000;
-      } else if (body.planId === 'agency') {
-        amount = 1999000;
+    async ({ workspace, session, body, set }) => {
+      try {
+        const request =
+          body.kind === 'subscription'
+            ? { kind: 'subscription' as const, planId: body.planId ?? '' }
+            : { kind: 'top_up' as const, packageId: body.packageId ?? '' };
+        return await createCheckout({
+          workspace: workspace!,
+          user: session!.user,
+          request,
+          finishUrl: `${WEB_URL}/billing`
+        });
+      } catch (err) {
+        set.status = 400;
+        return { error: (err as Error).message };
       }
-
-      const [pay] = await db
-        .insert(schema.payments)
-        .values({
-          workspaceId: ws.id,
-          orderId,
-          kind: body.kind,
-          planId: body.planId || null,
-          aiUnits: body.aiUnits || null,
-          amountIdr: amount,
-          status: 'pending'
-        })
-        .returning();
-
-      // Return mock Midtrans Snap token for instant interactive demo
-      const snapToken = `snap_token_${orderId}_demo`;
-      return {
-        orderId,
-        snapToken,
-        redirectUrl: `https://app.midtrans.com/snap/v2/vtweb/${snapToken}`,
-        amount
-      };
     },
     {
       body: t.Object({
-        kind: t.String(),
+        kind: t.Union([t.Literal('subscription'), t.Literal('top_up')]),
         planId: t.Optional(t.String()),
-        aiUnits: t.Optional(t.Number())
+        packageId: t.Optional(t.String())
       })
     }
   )
+
+  // After returning from Midtrans (or "check status"): re-read the authoritative status.
+  .post('/api/v1/workspaces/:ws/billing/payments/:orderId/sync', async ({ workspace, params, set }) => {
+    const payment = await db.query.payments.findFirst({
+      where: and(eq(schema.payments.orderId, params.orderId), eq(schema.payments.workspaceId, workspace!.id))
+    });
+    if (!payment) {
+      set.status = 404;
+      return { error: 'Payment not found' };
+    }
+    try {
+      return await syncPayment(payment.orderId);
+    } catch (err) {
+      set.status = 502;
+      return { error: (err as Error).message };
+    }
+  })
 
   // 9. Audit Logs
   .get('/api/v1/workspaces/:ws/audit-logs', async ({ session, params }) => {
@@ -1072,47 +1143,35 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     return { status: 'received' };
   })
 
+  // Midtrans HTTP notification: verify signature, then trust only the Get Status API (idempotent).
   .post('/webhooks/midtrans', async ({ body, set }) => {
-    const orderId = body.order_id;
-    const statusCode = body.status_code;
-    const grossAmount = body.gross_amount;
-    const sigKey = body.signature_key;
-    const serverKey = process.env.MIDTRANS_SERVER_KEY || 'dummy_server_key';
-
-    if (process.env.MIDTRANS_SERVER_KEY && !verifyMidtransSignature(orderId, statusCode, grossAmount, serverKey, sigKey)) {
+    if (!process.env.MIDTRANS_SERVER_KEY) {
+      set.status = 503;
+      return { error: 'Payments not configured' };
+    }
+    const n = body as Record<string, string>;
+    if (!verifyBillingSignature(n)) {
       set.status = 401;
-      return { error: 'Invalid Midtrans signature' };
+      return { error: 'Invalid signature' };
     }
-
-    // Update payment
-    const payment = await db.query.payments.findFirst({
-      where: eq(schema.payments.orderId, orderId)
-    });
-
-    if (payment) {
-      const isPaid = ['capture', 'settlement'].includes(body.transaction_status);
-      await db
-        .update(schema.payments)
-        .set({
-          status: isPaid ? 'settlement' : body.transaction_status,
-          paidAt: isPaid ? new Date() : null,
-          paymentType: body.payment_type || 'qris',
-          rawNotification: body
-        })
-        .where(eq(schema.payments.id, payment.id));
-
-      if (isPaid && payment.kind === 'top_up' && payment.aiUnits) {
-        await db
-          .update(schema.subscriptions)
-          .set({
-            extraAiUnits: sql`${schema.subscriptions.extraAiUnits} + ${payment.aiUnits}`
-          })
-          .where(eq(schema.subscriptions.workspaceId, payment.workspaceId));
-      }
+    try {
+      await syncPayment(n.order_id);
+    } catch (err) {
+      // Non-2xx makes Midtrans retry later.
+      set.status = 502;
+      return { error: (err as Error).message };
     }
-
     return { status: 'ok' };
   });
+
+/** PRD decision 6: trial = Shadow only; expired subscriptions can't publish either. */
+async function publishBlockedReason(workspaceId: string): Promise<string | null> {
+  const st = await getBillingStatus(workspaceId);
+  if (!st) return null; // no subscription row (local dev)
+  if (st.expired) return 'Langganan sudah berakhir. Perpanjang paket di menu Kuota & Paket.';
+  if (st.isTrial) return 'Masa trial hanya mode Shadow (draft tanpa kirim). Upgrade paket untuk membalas/menyembunyikan komentar.';
+  return null;
+}
 
 // Helper
 async function getWorkspaceBySlugOrId(identifier: string) {

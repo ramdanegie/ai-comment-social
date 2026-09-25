@@ -29,7 +29,8 @@
       session.isLangEn ? `Signed in as ${me.user.name}` : `Berhasil masuk sebagai ${me.user.name}`,
       session.isLangEn ? 'Welcome back' : 'Selamat datang'
     );
-    goto(target(), { replaceState: true });
+    const dest = me.user.isSuperadmin && me.workspaces.length === 0 ? '/admin' : target();
+    goto(dest, { replaceState: true });
   }
 </script>
 

@@ -5,6 +5,8 @@ import type {
   SocialAccount,
   ReplyPolicy,
   Plan,
+  Pricing,
+  BillingOverview,
   PaymentItem,
   AuditLogItem,
   UserRole
@@ -16,11 +18,12 @@ const API_BASE = typeof window !== 'undefined'
   : 'http://127.0.0.1:3099';
 
 export type Me = {
-  user: { id: string; name: string; email: string; image?: string | null };
+  user: { id: string; name: string; email: string; image?: string | null; isSuperadmin?: boolean };
   workspaces: Array<{ id: string; name: string; slug: string; role: UserRole }>;
 };
 
 export const api = {
+  authBaseUrl: API_BASE,
   // 1. Workspaces (PostgreSQL workspaces table)
   async getWorkspaces(): Promise<Array<{ id: string; name: string; slug: string; createdAt: string }>> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces`);
@@ -284,36 +287,70 @@ export const api = {
   },
 
   // 9. Billing, Plans & Payments (PostgreSQL plans, subscriptions, payments)
-  async getPlans(): Promise<Plan[]> {
-    const res = await authFetch(`${API_BASE}/api/v1/plans`);
-    if (!res.ok) return [];
+  async getPricing(): Promise<Pricing> {
+    const res = await authFetch(`${API_BASE}/api/v1/pricing`);
+    if (!res.ok) throw new Error('Gagal mengambil daftar harga');
     return await res.json();
   },
 
-  async getBilling(ws: string) {
+  async getBilling(ws: string): Promise<BillingOverview> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing`);
-    if (!res.ok) {
-      return {
-        subscription: null,
-        plan: null,
-        usedUnits: 0,
-        totalUnits: 0,
-        percentUsed: 0,
-        paymentHistory: []
-      };
-    }
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Gagal mengambil data billing');
     return await res.json();
   },
 
-  async checkout(ws: string, payload: { kind: string; planId?: string; aiUnits?: number }) {
+  /** Creates a Midtrans Snap transaction; the caller redirects to `redirectUrl`. */
+  async checkout(
+    ws: string,
+    payload: { kind: 'subscription'; planId: string } | { kind: 'top_up'; packageId: string }
+  ): Promise<{ orderId: string; redirectUrl: string; amountIdr: number }> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) throw new Error('Gagal memproses transaksi checkout');
-    return await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Gagal membuat transaksi');
+    return data;
   },
+
+  async syncPayment(ws: string, orderId: string): Promise<{ status?: string }> {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing/payments/${encodeURIComponent(orderId)}/sync`, { method: 'POST' });
+    return await res.json().catch(() => ({}));
+  },
+
+  /** Public sign-up (trial workspace). Call signIn() afterwards. */
+  async register(payload: { name: string; email: string; password: string; brandName: string }): Promise<void> {
+    const res = await fetch(`${API_BASE}/api/v1/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || data.message || (res.status === 422 ? 'Periksa kembali isian formulir.' : 'Pendaftaran gagal'));
+    }
+  },
+
+  // Superadmin (platform operator)
+  admin: {
+    async get<T>(path: string): Promise<T> {
+      const res = await authFetch(`${API_BASE}/api/v1/admin${path}`);
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `Gagal memuat ${path}`);
+      return await res.json();
+    },
+    async send<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
+      const res = await authFetch(`${API_BASE}/api/v1/admin${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || 'Gagal menyimpan');
+      return data;
+    }
+  },
+
 
   // 10. Audit Logs (PostgreSQL audit_logs)
   async getAuditLogs(ws: string): Promise<AuditLogItem[]> {

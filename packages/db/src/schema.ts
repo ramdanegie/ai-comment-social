@@ -27,6 +27,8 @@ export const users = pgTable('users', {
   name: text('name').notNull(),
   emailVerified: boolean('email_verified').default(false).notNull(),
   avatarUrl: text('avatar_url'),
+  /** Platform operator (sets prices, sees all workspaces). Never settable from the client. */
+  isSuperadmin: boolean('is_superadmin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -262,11 +264,32 @@ export const dailyMetrics = pgTable(
 );
 
 export const plans = pgTable('plans', {
-  id: text('id').primaryKey(), // starter | growth | agency
+  id: text('id').primaryKey(), // trial | starter | growth | agency | …
   name: text('name').notNull(),
   monthlyAiUnits: integer('monthly_ai_units').notNull(),
   maxSocialAccounts: integer('max_social_accounts').notNull(),
-  priceIdr: integer('price_idr').notNull()
+  priceIdr: integer('price_idr').notNull(),
+  description: text('description'),
+  /** Shown on the pricing/billing page and purchasable. `trial` is never public. */
+  isPublic: boolean('is_public').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull()
+});
+
+/** AI-unit top-up packs, priced by the superadmin. */
+export const topupPackages = pgTable('topup_packages', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  aiUnits: integer('ai_units').notNull(),
+  priceIdr: integer('price_idr').notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull()
+});
+
+/** Platform-wide settings (key → JSON), e.g. `trial` = { days }. */
+export const platformSettings = pgTable('platform_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull()
 });
 
 export const subscriptions = pgTable('subscriptions', {
@@ -290,7 +313,10 @@ export const payments = pgTable('payments', {
   orderId: text('order_id').notNull().unique(),
   kind: text('kind').notNull(), // subscription | top_up
   planId: text('plan_id').references(() => plans.id),
+  topupPackageId: text('topup_package_id').references(() => topupPackages.id),
   aiUnits: integer('ai_units'),
+  createdBy: text('created_by'),
+  redirectUrl: text('redirect_url'),
   amountIdr: integer('amount_idr').notNull(),
   status: text('status').notNull().default('pending'), // pending | settlement | expire | cancel | deny | refund
   midtransTransactionId: text('midtrans_transaction_id'),

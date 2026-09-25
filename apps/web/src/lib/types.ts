@@ -137,6 +137,36 @@ export interface Plan {
   monthlyAiUnits: number;
   maxSocialAccounts: number;
   priceIdr: number;
+  description?: string | null;
+  isPublic: boolean;
+  sortOrder: number;
+}
+
+export interface TopupPackage {
+  id: string;
+  name: string;
+  aiUnits: number;
+  priceIdr: number;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface Pricing {
+  plans: Plan[];
+  topups: TopupPackage[];
+  trialDays: number;
+}
+
+export interface BillingStatus {
+  subscription: { planId: string; periodStart: string; periodEnd: string; extraAiUnits: number; status: string };
+  plan: Plan | null;
+  isTrial: boolean;
+  expired: boolean;
+  includedUnits: number;
+  extraUnits: number;
+  usedUnits: number;
+  totalUnits: number;
+  remainingUnits: number;
 }
 
 export interface Subscription {
@@ -153,10 +183,21 @@ export interface PaymentItem {
   orderId: string;
   kind: 'subscription' | 'top_up';
   amountIdr: number;
-  status: 'pending' | 'settlement' | 'expire' | 'cancel';
-  paymentType?: string;
-  paidAt?: string;
+  status: string;
+  paymentType?: string | null;
+  planId?: string | null;
+  aiUnits?: number | null;
+  redirectUrl?: string | null;
+  paidAt?: string | null;
   createdAt: string;
+  workspace?: string;
+}
+
+export interface BillingOverview {
+  status: BillingStatus | null;
+  payments: PaymentItem[];
+  pricing: Pricing;
+  paymentsEnabled: boolean;
 }
 
 export interface AuditLogItem {

@@ -47,3 +47,4 @@ vite.config.js.timestamp-*
 apps/server/release/
 apps/server/.env.deploy
 apps/server/.env.hosting
+apps/server/.credentials.local
