@@ -10,7 +10,7 @@
   import { timeAgo, formatNumber } from '$lib/format';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     isLangEn = false,
     onSelectPage = () => {}
   }: {

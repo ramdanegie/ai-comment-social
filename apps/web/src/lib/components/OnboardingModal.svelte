@@ -23,9 +23,9 @@
   } = $props();
 
   let currentStep: number = $state(1);
-  let workspaceName: string = $state('MauJahit.id');
+  let workspaceName: string = $state('');
   let platformChoice: string = $state('instagram');
-  let accountUsername: string = $state('maujahit.id');
+  let accountUsername: string = $state('');
   let brandTone: string = $state('Ramah, sopan, dan bersahabat khas UMKM fashion');
   let useEmoji: boolean = $state(true);
   let defaultCta: string = $state('Silakan DM kami ya kak untuk info ukuran!');

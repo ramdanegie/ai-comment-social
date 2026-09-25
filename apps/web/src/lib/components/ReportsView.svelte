@@ -15,7 +15,7 @@
   import type { DailyMetric } from '../types';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     isLangEn = false
   }: {
     workspaceSlug?: string;
@@ -75,7 +75,7 @@
       <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
         {isLangEn
           ? 'Weekly sentiment distribution, auto-reply velocity, and CSV export'
-          : 'Laporan harian & mingguan kinerja moderasi MauJahit.id beserta ekspor CSV'}
+          : 'Laporan harian & mingguan kinerja moderasi beserta ekspor CSV'}
       </p>
     </div>
 

@@ -19,10 +19,10 @@
   let isLoggingOut = $state(false);
 
   const userName = $derived(
-    currentUser?.name || (currentRole === 'owner' ? 'Budi Santoso' : currentRole === 'admin' ? 'Siti Rahma' : 'Dewi Lestari')
+    currentUser?.name || currentUser?.email || ''
   );
   const userEmail = $derived(
-    currentUser?.email || (currentRole === 'owner' ? 'budi@maujahit.id' : currentRole === 'admin' ? 'siti@maujahit.id' : 'dewi@maujahit.id')
+    currentUser?.email || ''
   );
   const userInitials = $derived(
     userName

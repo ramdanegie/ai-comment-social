@@ -13,7 +13,7 @@
   import type { UserRole } from '../types';
 
   let {
-    activeWorkspace = $bindable('maujahit'),
+    activeWorkspace = $bindable(''),
     currentRole = $bindable('owner' as UserRole),
     pendingReviewCount = 4,
     isDarkMode = $bindable(false),

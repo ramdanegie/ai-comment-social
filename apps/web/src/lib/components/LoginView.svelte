@@ -216,32 +216,33 @@
             <rect x="261" y="163" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
 
             <!-- Avatar & User Info -->
-            <circle cx="45" cy="50" r="14" fill="#ea4335" fill-opacity="0.15" stroke="#ea4335" stroke-width="2" />
-            <rect x="39" y="44" width="12" height="12" rx="3.5" stroke="#ea4335" stroke-width="1.6" fill="none" />
-            <circle cx="45" cy="50" r="2.5" stroke="#ea4335" stroke-width="1.4" fill="none" />
+            <rect x="34" y="38" width="24" height="24" rx="7" fill="#ea4335" fill-opacity="0.12" stroke="#ea4335" stroke-width="1.6" />
+            <rect x="38" y="42" width="16" height="16" rx="4.5" stroke="#ea4335" stroke-width="1.6" fill="none" />
+            <circle cx="46" cy="50" r="3.2" stroke="#ea4335" stroke-width="1.4" fill="none" />
+            <circle cx="50" cy="46" r="0.9" fill="#ea4335" stroke="none" />
 
-            <text x="68" y="47" font-size="12" font-weight="700" fill="currentColor" fill-opacity="0.9" stroke="none">anisa_wardani</text>
-            <text x="68" y="60" font-size="9" font-weight="500" fill="currentColor" fill-opacity="0.45" stroke="none">Instagram Comment • Baru saja</text>
+            <text x="66" y="46" font-size="12" font-weight="700" fill="currentColor" fill-opacity="0.92" stroke="none">anisa_wardani</text>
+            <text x="66" y="59" font-size="9" font-weight="500" fill="currentColor" fill-opacity="0.5" stroke="none">Instagram Comment • 2m lalu</text>
 
             <!-- Intent Badge -->
-            <rect x="180" y="40" width="75" height="19" rx="9.5" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.5" />
-            <text x="217" y="53" font-size="9" font-weight="700" fill="#10b981" stroke="none" text-anchor="middle">Minat Beli</text>
+            <rect x="180" y="39" width="75" height="20" rx="10" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.5" />
+            <text x="217" y="52" font-size="9" font-weight="700" fill="#10b981" stroke="none" text-anchor="middle">★ Minat Beli</text>
 
             <!-- Card Internal Divider -->
-            <line x1="32" y1="72" x2="253" y2="72" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+            <line x1="32" y1="70" x2="253" y2="70" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 
             <!-- Customer Text -->
-            <text x="34" y="94" font-size="11" font-weight="600" fill="currentColor" fill-opacity="0.88" stroke="none">
+            <text x="34" y="93" font-size="11.5" font-weight="600" fill="currentColor" fill-opacity="0.9" stroke="none">
               "Bisa custom ukuran jumbo?"
             </text>
 
             <!-- Wireframe Text Strokes -->
-            <line x1="34" y1="112" x2="225" y2="112" stroke-width="4" stroke-opacity="0.35" stroke="currentColor" class="sc-pulse-line" />
-            <line x1="34" y1="124" x2="165" y2="124" stroke-width="4" stroke-opacity="0.25" stroke="currentColor" />
+            <line x1="34" y1="110" x2="225" y2="110" stroke-width="4.5" stroke-opacity="0.35" stroke="currentColor" class="sc-pulse-line" />
+            <line x1="34" y1="122" x2="165" y2="122" stroke-width="4.5" stroke-opacity="0.22" stroke="currentColor" />
 
             <!-- AI Confidence Pill -->
-            <circle cx="42" cy="148" r="4" fill="#f59e0b" stroke="none" />
-            <text x="52" y="151" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.65" stroke="none">AI Confidence: 98% (High Intent)</text>
+            <circle cx="42" cy="146" r="4" fill="#f59e0b" stroke="none" />
+            <text x="52" y="149" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.75" stroke="none">AI Confidence: 98% (High Intent)</text>
           </g>
 
           <!-- Central AI Brain Core Node -->
@@ -295,69 +296,75 @@
             <circle cx="445" cy="50" r="1.5" fill="white" stroke="none" />
             <path d="M 437 55 Q 441 58 445 55" stroke="white" stroke-width="1.2" fill="none" />
 
-            <text x="462" y="47" font-size="12" font-weight="700" fill="currentColor" fill-opacity="0.9" stroke="none">Replyra AI Agent</text>
+            <text x="462" y="47" font-size="12" font-weight="700" fill="currentColor" fill-opacity="0.92" stroke="none">Replyra AI Agent</text>
             <circle cx="466" cy="58" r="3" fill="#10b981" stroke="none" />
             <text x="474" y="61" font-size="8.5" font-weight="600" fill="#10b981" stroke="none">Auto-Reply Aktif</text>
 
             <!-- Meta Verified Badge -->
             <rect x="575" y="40" width="73" height="19" rx="5" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.3" stroke-width="1" />
-            <text x="611" y="52" font-size="8" font-weight="600" fill="currentColor" fill-opacity="0.7" stroke="none" text-anchor="middle">Meta Verified</text>
+            <text x="611" y="52" font-size="8" font-weight="600" fill="currentColor" fill-opacity="0.75" stroke="none" text-anchor="middle">Meta Verified</text>
 
             <!-- Header Divider -->
-            <line x1="427" y1="72" x2="648" y2="72" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+            <line x1="427" y1="70" x2="648" y2="70" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
 
             <!-- Typewriter Auto-Reply Text Container -->
-            <rect x="427" y="82" width="221" height="80" rx="8" fill="currentColor" fill-opacity="0.06" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" />
+            <rect x="427" y="80" width="221" height="82" rx="8" fill="currentColor" fill-opacity="0.06" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" />
 
             <defs>
               <clipPath id="sc-type-clip-1">
-                <rect x="436" y="90" width="202" height="18" class="sc-type-line-1" />
+                <rect x="436" y="86" width="202" height="18" class="sc-type-line-1" />
               </clipPath>
               <clipPath id="sc-type-clip-2">
-                <rect x="436" y="110" width="202" height="18" class="sc-type-line-2" />
+                <rect x="436" y="104" width="202" height="18" class="sc-type-line-2" />
               </clipPath>
               <clipPath id="sc-type-clip-3">
-                <rect x="436" y="130" width="202" height="18" class="sc-type-line-3" />
+                <rect x="436" y="122" width="202" height="18" class="sc-type-line-3" />
               </clipPath>
             </defs>
 
             <!-- Simulated Typing Sentences -->
-            <text x="437" y="103" font-size="9.5" font-family="monospace" font-weight="500" fill="currentColor" fill-opacity="0.9" stroke="none" clip-path="url(#sc-type-clip-1)">
+            <text x="437" y="99" font-size="9.5" font-family="monospace" font-weight="600" fill="currentColor" fill-opacity="0.95" stroke="none" clip-path="url(#sc-type-clip-1)">
               Halo kak Anisa! Bisa banget custom
             </text>
-            <text x="437" y="122" font-size="9.5" font-family="monospace" font-weight="500" fill="currentColor" fill-opacity="0.9" stroke="none" clip-path="url(#sc-type-clip-2)">
+            <text x="437" y="117" font-size="9.5" font-family="monospace" font-weight="600" fill="currentColor" fill-opacity="0.95" stroke="none" clip-path="url(#sc-type-clip-2)">
               ukuran jumbo. Ready 5-7 hari kerja.
             </text>
-            <text x="437" y="141" font-size="9.5" font-family="monospace" font-weight="500" fill="currentColor" fill-opacity="0.9" stroke="none" clip-path="url(#sc-type-clip-3)">
-              Silakan cek DM untuk detailnya ya kak!
+            <text x="437" y="135" font-size="9.5" font-family="monospace" font-weight="600" fill="currentColor" fill-opacity="0.95" stroke="none" clip-path="url(#sc-type-clip-3)">
+              Silakan DM kami untuk detailnya ya kak!
             </text>
             <!-- Blinking typing cursor moving with sc-caret -->
             <g class="sc-caret-track">
-              <line x1="436" y1="134" x2="436" y2="148" stroke="#ea4335" stroke-width="2" class="sc-blink" />
+              <line x1="436" y1="126" x2="436" y2="140" stroke="#ea4335" stroke-width="2.5" class="sc-blink" />
             </g>
 
             <!-- Rule Compliance Verification Indicators -->
-            <g class="sc-pop-badge-1" transform="translate(432 174)">
-              <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1.5" />
-              <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
-              <text x="20" y="11" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.8" stroke="none">Tone: Ramah & Santun</text>
+            <g transform="translate(432 172)">
+              <g class="sc-pop-badge-1">
+                <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.25" stroke="#10b981" stroke-width="1.5" />
+                <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
+                <text x="20" y="11" font-size="9.5" font-weight="600" fill="currentColor" fill-opacity="0.88" stroke="none">Tone: Ramah & Santun</text>
+              </g>
             </g>
 
-            <g class="sc-pop-badge-2" transform="translate(432 196)">
-              <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1.5" />
-              <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
-              <text x="20" y="11" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.8" stroke="none">Katalog & Stok: Sinkron</text>
+            <g transform="translate(432 194)">
+              <g class="sc-pop-badge-2">
+                <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.25" stroke="#10b981" stroke-width="1.5" />
+                <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
+                <text x="20" y="11" font-size="9.5" font-weight="600" fill="currentColor" fill-opacity="0.88" stroke="none">Katalog & Stok: Sinkron</text>
+              </g>
             </g>
 
-            <g class="sc-pop-badge-3" transform="translate(432 218)">
-              <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1.5" />
-              <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
-              <text x="20" y="11" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.8" stroke="none">Anti-Hallucination: Aman</text>
+            <g transform="translate(432 216)">
+              <g class="sc-pop-badge-3">
+                <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.25" stroke="#10b981" stroke-width="1.5" />
+                <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
+                <text x="20" y="11" font-size="9.5" font-weight="600" fill="currentColor" fill-opacity="0.88" stroke="none">Anti-Hallucination: Aman</text>
+              </g>
             </g>
 
             <!-- Final Sent Badge -->
             <g class="sc-pop-sent">
-              <rect x="427" y="244" width="221" height="20" rx="6" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.5" />
+              <rect x="427" y="244" width="221" height="20" rx="6" fill="#10b981" fill-opacity="0.18" stroke="#10b981" stroke-width="1.5" />
               <text x="537" y="257" font-size="9" font-weight="700" fill="#10b981" stroke="none" text-anchor="middle">✓ Balasan Terkirim Otomatis (0.8s)</text>
             </g>
           </g>
@@ -421,11 +428,6 @@
           </div>
         </div>
 
-        {#if import.meta.env.DEV}
-          <p class="mt-5 rounded-xl border border-dashed border-amber-300 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300">
-            Dev: budi@maujahit.id (owner) · siti@ (admin) · dewi@ (viewer) — password lokal dari <code>scripts/users.ts</code>
-          </p>
-        {/if}
 
         {#if errorMessage}
           <div class="mt-5 rounded-xl bg-rose-50 px-3 py-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" role="alert">
@@ -549,17 +551,17 @@
 
   /* Expanding Radar Ripple Rings from AI Brain Core */
   .iso-stage .sc-ripple {
-    transform-origin: 50% 50%;
+    transform-origin: center center;
     animation: sc-ripple 3s ease-out infinite;
   }
   @keyframes sc-ripple {
-    0% { transform: scale(0.7); opacity: 0.9; }
+    0% { transform: scale(0.7); opacity: 0.95; }
     100% { transform: scale(2.2); opacity: 0; }
   }
 
   /* AI Brain Heartbeat Pulse */
   .iso-stage .sc-core-pulse {
-    transform-origin: 50% 50%;
+    transform-origin: center center;
     animation: sc-core-pulse 3s ease-in-out infinite;
   }
   @keyframes sc-core-pulse {
@@ -575,7 +577,7 @@
   }
   @keyframes sc-type-1 {
     0% { transform: scaleX(0); }
-    20%, 92% { transform: scaleX(1); }
+    20%, 94% { transform: scaleX(1); }
     98%, 100% { transform: scaleX(0); }
   }
 
@@ -585,7 +587,7 @@
   }
   @keyframes sc-type-2 {
     0%, 20% { transform: scaleX(0); }
-    40%, 92% { transform: scaleX(1); }
+    42%, 94% { transform: scaleX(1); }
     98%, 100% { transform: scaleX(0); }
   }
 
@@ -594,65 +596,69 @@
     animation: sc-type-3 6s steps(28, end) infinite;
   }
   @keyframes sc-type-3 {
-    0%, 40% { transform: scaleX(0); }
-    60%, 92% { transform: scaleX(1); }
+    0%, 42% { transform: scaleX(0); }
+    64%, 94% { transform: scaleX(1); }
     98%, 100% { transform: scaleX(0); }
   }
 
-  /* Caret track animation following the typing */
+  /* Caret track animation following lines 1, 2, and 3 */
   .iso-stage .sc-caret-track {
     animation: sc-caret-track 6s steps(28, end) infinite;
   }
   @keyframes sc-caret-track {
-    0% { transform: translateX(0); opacity: 1; }
-    20% { transform: translateX(180px); opacity: 1; }
-    21% { transform: translateX(0); opacity: 1; }
-    40% { transform: translateX(170px); opacity: 1; }
-    41% { transform: translateX(0); opacity: 1; }
-    60%, 92% { transform: translateX(192px); opacity: 1; }
-    98%, 100% { transform: translateX(0); opacity: 0; }
+    0% { transform: translate(0px, -22px); opacity: 1; }
+    20% { transform: translate(182px, -22px); opacity: 1; }
+    21% { transform: translate(0px, -4px); opacity: 1; }
+    42% { transform: translate(175px, -4px); opacity: 1; }
+    43% { transform: translate(0px, 14px); opacity: 1; }
+    64%, 94% { transform: translate(195px, 14px); opacity: 1; }
+    98%, 100% { transform: translate(0px, -22px); opacity: 0; }
   }
 
-  /* Compliance Badges Popping in Sequence */
+  /* Compliance Badges Popping in Sequence with high base visibility */
   .iso-stage .sc-pop-badge-1 {
-    transform-origin: 50% 50%;
+    transform-origin: center center;
     animation: sc-pop-b1 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
   }
   @keyframes sc-pop-b1 {
-    0%, 35% { transform: scale(0.6); opacity: 0.3; }
-    42%, 92% { transform: scale(1); opacity: 1; }
-    98%, 100% { transform: scale(0.6); opacity: 0.3; }
+    0%, 35% { transform: scale(0.97); opacity: 0.75; }
+    40% { transform: scale(1.15); opacity: 1; }
+    45%, 94% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.97); opacity: 0.75; }
   }
 
   .iso-stage .sc-pop-badge-2 {
-    transform-origin: 50% 50%;
+    transform-origin: center center;
     animation: sc-pop-b2 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
   }
   @keyframes sc-pop-b2 {
-    0%, 48% { transform: scale(0.6); opacity: 0.3; }
-    55%, 92% { transform: scale(1); opacity: 1; }
-    98%, 100% { transform: scale(0.6); opacity: 0.3; }
+    0%, 48% { transform: scale(0.97); opacity: 0.75; }
+    53% { transform: scale(1.15); opacity: 1; }
+    58%, 94% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.97); opacity: 0.75; }
   }
 
   .iso-stage .sc-pop-badge-3 {
-    transform-origin: 50% 50%;
-    animation: sc-pop-badge-3 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+    transform-origin: center center;
+    animation: sc-pop-b3 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
   }
-  @keyframes sc-pop-badge-3 {
-    0%, 60% { transform: scale(0.6); opacity: 0.3; }
-    67%, 92% { transform: scale(1); opacity: 1; }
-    98%, 100% { transform: scale(0.6); opacity: 0.3; }
+  @keyframes sc-pop-b3 {
+    0%, 60% { transform: scale(0.97); opacity: 0.75; }
+    65% { transform: scale(1.15); opacity: 1; }
+    70%, 94% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.97); opacity: 0.75; }
   }
 
   /* Sent Confirmation Pill Pop */
   .iso-stage .sc-pop-sent {
-    transform-origin: 50% 50%;
+    transform-origin: center center;
     animation: sc-pop-sent 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
   }
   @keyframes sc-pop-sent {
-    0%, 68% { transform: scale(0.9); opacity: 0.2; }
-    74%, 92% { transform: scale(1); opacity: 1; }
-    98%, 100% { transform: scale(0.9); opacity: 0.2; }
+    0%, 68% { transform: scale(0.97); opacity: 0.8; }
+    73% { transform: scale(1.08); opacity: 1; }
+    78%, 94% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.97); opacity: 0.8; }
   }
 
   /* Blinking cursor and status dots */
@@ -666,7 +672,7 @@
 
   /* Soundbar Equalizer Bouncing */
   .iso-stage .sc-bar {
-    transform-origin: 50% 50%;
+    transform-origin: center bottom;
     animation: sc-bar 0.75s ease-in-out infinite alternate;
   }
   @keyframes sc-bar {

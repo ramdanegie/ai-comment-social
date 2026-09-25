@@ -4,9 +4,8 @@ import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { db, schema } from '@replyra/db';
 import { eq, desc, and, sql, ilike, inArray } from 'drizzle-orm';
-import { LlmClassifier } from './contexts/moderation/domain/LlmClassifier';
 import { ReplyPolicyEvaluator } from './contexts/response/domain/ReplyPolicyEvaluator';
-import { LlmReplyGenerator } from './contexts/response/domain/LlmReplyGenerator';
+import { classifyComment, draftReply } from './contexts/moderation/application/AiModeration';
 import { encryptToken, verifyMetaSignature, verifyMidtransSignature } from './shared/infrastructure/crypto';
 import { enqueueJob } from './contexts/engagement/application/MetaIngestion';
 import {
@@ -242,70 +241,6 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     );
     return accountsWithPolicy;
   })
-
-  .post(
-    '/api/v1/workspaces/:ws/accounts/connect/meta',
-    async ({ session, params, body }) => {
-      const ws = await getWorkspaceBySlugOrId(params.ws);
-      if (!ws) throw new Error('Workspace not found');
-
-      const encrypted = encryptToken(body.accessToken);
-      const [acc] = await db
-        .insert(schema.socialAccounts)
-        .values({
-          workspaceId: ws.id,
-          platform: body.platform as any,
-          externalId: body.externalId,
-          username: body.username,
-          avatarUrl: body.avatarUrl || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=120&h=120&fit=crop',
-          accessTokenEnc: encrypted,
-          tokenExpiresAt: new Date(Date.now() + 60 * 24 * 3600 * 1000),
-          scopes: ['instagram_basic', 'instagram_manage_comments', 'pages_read_engagement'],
-          status: 'connected',
-          lastSyncedAt: new Date()
-        })
-        .returning();
-
-      // Create default policy (starts in Shadow Mode per PRD §10.1)
-      await db.insert(schema.replyPolicies).values({
-        socialAccountId: acc.id,
-        mode: 'shadow',
-        autoReplyIntents: ['praise', 'purchase_intent'],
-        minConfidence: 0.8,
-        dailyAutoReplyLimit: 200,
-        minIntervalSeconds: 20,
-        activeHours: { start: '08:00', end: '22:00', tz: 'Asia/Jakarta' },
-        brandVoice: {
-          brandName: body.username,
-          tone: 'Ramah dan profesional',
-          useEmoji: true,
-          cta: 'Silakan hubungi DM kami ya kak!',
-          forbiddenPhrases: []
-        },
-        autoHideSpam: true
-      });
-
-      await db.insert(schema.auditLogs).values({
-        workspaceId: ws.id,
-        actor: session?.user.id ?? 'unknown',
-        action: 'account.connected',
-        targetType: 'social_account',
-        targetId: acc.id,
-        meta: { platform: acc.platform, username: acc.username }
-      });
-
-      return { success: true, account: acc };
-    },
-    {
-      body: t.Object({
-        platform: t.String(),
-        externalId: t.String(),
-        username: t.String(),
-        avatarUrl: t.Optional(t.String()),
-        accessToken: t.String()
-      })
-    }
-  )
 
   // Instagram Login (no Facebook Page): step 1 — URL for the "Hubungkan Instagram" button
   .get('/api/v1/workspaces/:ws/accounts/connect/instagram', async ({ session, params, set }) => {
@@ -650,7 +585,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     if (!ws) throw new Error('Workspace not found');
 
     const comment = await db.query.comments.findFirst({
-      where: eq(schema.comments.id, params.commentId as any)
+      where: and(eq(schema.comments.id, params.commentId as any), eq(schema.comments.workspaceId, ws.id))
     });
     if (!comment) throw new Error('Comment not found');
 
@@ -662,20 +597,31 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
       where: eq(schema.classifications.commentId, comment.id)
     });
 
-    const brandVoice = (policy?.brandVoice as any) || {
-      brandName: 'MauJahit.id',
-      tone: 'Ramah dan bersahabat',
-      useEmoji: true,
-      cta: 'Silakan DM kami ya kak!',
-      forbiddenPhrases: []
+    const post = comment.postId ? await db.query.posts.findFirst({ where: eq(schema.posts.id, comment.postId) }) : null;
+    const bv = (policy?.brandVoice as any) ?? {};
+    const brandVoice = {
+      brandName: bv.brandName || ws.name,
+      tone: bv.tone || 'Ramah dan profesional',
+      useEmoji: bv.useEmoji ?? true,
+      cta: bv.cta || '',
+      forbiddenPhrases: bv.forbiddenPhrases ?? []
     };
 
-    const newDraft = LlmReplyGenerator.generate(
-      comment.text,
-      comment.authorName,
-      (classification as any) || { sentiment: 'positive', riskLabel: 'none', intent: 'praise' },
-      brandVoice
-    );
+    const { text: newDraft } = await draftReply({
+      workspaceId: ws.id,
+      commentId: comment.id,
+      input: {
+        commentText: comment.text,
+        authorName: comment.authorName,
+        postCaption: post?.caption ?? null,
+        classification: {
+          sentiment: classification?.sentiment ?? 'neutral',
+          riskLabel: classification?.riskLabel ?? 'none',
+          intent: classification?.intent ?? 'other'
+        },
+        brandVoice
+      }
+    });
 
     await db
       .update(schema.replies)
@@ -793,25 +739,36 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
   // Policy live preview tester
   .post(
     '/api/v1/workspaces/:ws/accounts/:id/policy/preview',
-    async ({ body }) => {
-      const bv: any = typeof body.brandVoice === 'object' && body.brandVoice !== null
-        ? { ...body.brandVoice }
-        : { tone: String(body.brandVoice || 'Ramah'), brandName: 'MauJahit.id', useEmoji: true, defaultCta: 'Silakan DM kami ya kak!', forbiddenPhrases: [] };
-      if (!bv.brandName) bv.brandName = 'MauJahit.id';
+    async ({ body, workspace }) => {
+      const raw: any = typeof body.brandVoice === 'object' && body.brandVoice !== null ? body.brandVoice : { tone: body.brandVoice };
+      const bv = {
+        brandName: raw.brandName || workspace!.name,
+        tone: raw.tone || 'Ramah',
+        useEmoji: raw.useEmoji ?? true,
+        cta: raw.cta || raw.defaultCta || '',
+        forbiddenPhrases: raw.forbiddenPhrases ?? []
+      };
 
-      const classification = await LlmClassifier.classify(
-        body.sampleComment,
-        null,
-        bv.brandName,
-        body.customBlockedKeywords || []
-      );
+      const classification = await classifyComment({
+        workspaceId: workspace!.id,
+        commentId: null,
+        text: body.sampleComment,
+        postCaption: null,
+        brandName: bv.brandName,
+        customKeywords: body.customBlockedKeywords || []
+      });
 
-      const draft = LlmReplyGenerator.generate(
-        body.sampleComment,
-        body.sampleAuthor || 'Kakak',
-        classification,
-        bv
-      );
+      const { text: draft } = await draftReply({
+        workspaceId: workspace!.id,
+        commentId: null,
+        input: {
+          commentText: body.sampleComment,
+          authorName: body.sampleAuthor || 'Kakak',
+          postCaption: null,
+          classification,
+          brandVoice: bv
+        }
+      });
 
       const decision = ReplyPolicyEvaluator.evaluate(
         classification,

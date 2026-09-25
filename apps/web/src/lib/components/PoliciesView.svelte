@@ -19,7 +19,7 @@
   import { toast } from '$lib/toast';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     isLangEn = false
   }: {
     workspaceSlug?: string;
@@ -37,7 +37,7 @@
     minIntervalSeconds: 20,
     activeHours: { start: '08:00', end: '22:00', tz: 'Asia/Jakarta' },
     brandVoice: {
-      brandName: 'MauJahit.id',
+      brandName: '',
       tone: 'Ramah, bersahabat, profesional, khas UMKM fashion Indonesia',
       useEmoji: true,
       cta: 'Silakan DM kami ya kak atau hubungi nomor layanan kami.',
@@ -160,7 +160,7 @@
       <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
         {isLangEn
           ? 'Configure autonomous AI behavior, safety thresholds, and brand voice guidelines'
-          : 'Konfigurasi mode AI, batasan risiko aman, dan gaya bahasa MauJahit.id'}
+          : 'Konfigurasi mode AI, batasan risiko aman, dan gaya bahasa workspace Anda'}
       </p>
     </div>
 

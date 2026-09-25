@@ -130,6 +130,7 @@
       isLangEn={session.isLangEn}
       currentRole={session.role}
       currentUser={session.user}
+      workspaceName={session.workspaces.find((w) => w.slug === session.workspace)?.name ?? ''}
       onLogout={() => (isLogoutModalOpen = true)}
     />
 

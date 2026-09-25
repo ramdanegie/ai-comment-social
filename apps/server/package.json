@@ -10,6 +10,7 @@
     "meta": "bun scripts/meta-dev.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
     "@elysiajs/cors": "^1.2.0",
     "@elysiajs/node": "^1.4.5",
     "@elysiajs/swagger": "^1.2.2",
@@ -18,7 +19,9 @@
     "better-auth": "^1.7.6",
     "drizzle-orm": "^0.39.3",
     "elysia": "^1.2.10",
-    "postgres": "^3.4.5"
+    "openai": "^7.23.0",
+    "postgres": "^3.4.5",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/bun": "latest"

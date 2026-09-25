@@ -19,7 +19,7 @@
   import Badge from './Badge.svelte';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     isLangEn = false
   }: {
     workspaceSlug?: string;
@@ -108,7 +108,7 @@
       <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
         {isLangEn
           ? 'Browse, filter, and audit all platform comments across Instagram & Facebook'
-          : 'Daftar riwayat, filter status, dan audit komentar media sosial MauJahit.id'}
+          : 'Daftar riwayat, filter status, dan audit komentar media sosial workspace Anda'}
       </p>
     </div>
   </div>

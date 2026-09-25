@@ -23,7 +23,7 @@
   import { timeAgo } from '$lib/format';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     currentRole = 'owner' as UserRole,
     isLangEn = false,
     onReviewed = () => {}

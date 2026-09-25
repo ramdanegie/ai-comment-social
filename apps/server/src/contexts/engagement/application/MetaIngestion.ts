@@ -11,15 +11,13 @@ import {
   type MetaPlatform,
   type NormalizedComment
 } from '../../channel/infrastructure/MetaGraphClient';
-import { LlmClassifier } from '../../moderation/domain/LlmClassifier';
-import { LlmReplyGenerator } from '../../response/domain/LlmReplyGenerator';
+import { classifyComment, draftReply } from '../../moderation/application/AiModeration';
 import { ReplyPolicyEvaluator, type ReplyPolicyEntity } from '../../response/domain/ReplyPolicyEvaluator';
 import { decryptToken, encryptToken } from '../../../shared/infrastructure/crypto';
 
 const POSTS_PER_POLL = Number(process.env.META_POLL_POSTS || 10);
 /** META_DRY_RUN=true → never call reply/hide on Meta, only log. Safe default for first tests. */
 const DRY_RUN = process.env.META_DRY_RUN === 'true';
-const CLASSIFIER_MODEL = 'rule-heuristic-v0';
 
 type SocialAccount = typeof schema.socialAccounts.$inferSelect;
 type Post = typeof schema.posts.$inferSelect;
@@ -177,16 +175,18 @@ async function classifyAndDecide(account: SocialAccount, post: Post | null, comm
   }
   const policy = policyRow as unknown as ReplyPolicyEntity & { customBlockedKeywords: string[] | null };
 
-  const classification = await LlmClassifier.classify(
-    comment.text,
-    post?.caption ?? null,
-    policy.brandVoice?.brandName ?? account.username,
-    policy.customBlockedKeywords ?? []
-  );
+  const classification = await classifyComment({
+    workspaceId: account.workspaceId,
+    commentId: comment.id,
+    text: comment.text,
+    postCaption: post?.caption ?? null,
+    brandName: policy.brandVoice?.brandName || account.username,
+    customKeywords: policy.customBlockedKeywords ?? []
+  });
 
   await db
     .insert(schema.classifications)
-    .values({ commentId: comment.id, ...classification, model: CLASSIFIER_MODEL })
+    .values({ commentId: comment.id, ...classification })
     .onConflictDoNothing({ target: schema.classifications.commentId });
 
   let { targetStatus, reason } = ReplyPolicyEvaluator.evaluate(
@@ -203,7 +203,17 @@ async function classifyAndDecide(account: SocialAccount, post: Post | null, comm
 
   // Draft only for comments without risk; hate/threat/toxic/spam never get an AI draft (PRD §5.3).
   if (classification.riskLabel === 'none') {
-    const draft = LlmReplyGenerator.generate(comment.text, comment.authorName, classification, policy.brandVoice);
+    const { text: draft } = await draftReply({
+      workspaceId: account.workspaceId,
+      commentId: comment.id,
+      input: {
+        commentText: comment.text,
+        authorName: comment.authorName,
+        postCaption: post?.caption ?? null,
+        classification,
+        brandVoice: { ...policy.brandVoice, brandName: policy.brandVoice?.brandName || account.username }
+      }
+    });
     const check = ReplyPolicyEvaluator.postCheckReply(draft, policy.brandVoice);
     if (!check.passed && targetStatus === 'AUTO_REPLY_QUEUED') {
       targetStatus = 'NEEDS_REVIEW';

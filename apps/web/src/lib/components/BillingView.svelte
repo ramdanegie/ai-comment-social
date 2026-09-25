@@ -16,7 +16,7 @@
   import { toast } from '$lib/toast';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     isLangEn = false
   }: {
     workspaceSlug?: string;
@@ -174,7 +174,7 @@
         Paket Aktif
       </div>
       <h3 class="text-base font-bold text-slate-900 dark:text-white">Growth</h3>
-      <p class="mt-1 text-xs text-slate-500">Pilot tenant MauJahit.id (Rekomendasi)</p>
+      <p class="mt-1 text-xs text-slate-500">Rekomendasi</p>
       <div class="mt-4">
         <span class="text-2xl font-bold font-mono">Rp 799.000</span>
         <span class="text-xs text-slate-400">/ bulan</span>

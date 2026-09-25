@@ -23,6 +23,7 @@
     isCollapsed = $bindable(false),
     currentRole = 'owner' as UserRole,
     currentUser = null,
+    workspaceName = '',
     onSelectPage = () => {},
     onLogout = () => {}
   }: {
@@ -32,16 +33,14 @@
     isCollapsed?: boolean;
     currentRole?: UserRole;
     currentUser?: { id?: string; name?: string; email?: string } | null;
+    workspaceName?: string;
     onSelectPage?: (page: string) => void;
     onLogout?: () => void;
   } = $props();
 
-  const userName = $derived(
-    currentUser?.name || (currentRole === 'owner' ? 'Budi Santoso' : currentRole === 'admin' ? 'Siti Rahma' : 'Dewi Lestari')
-  );
-  const userEmail = $derived(
-    currentUser?.email || (currentRole === 'owner' ? 'budi@maujahit.id' : currentRole === 'admin' ? 'siti@maujahit.id' : 'dewi@maujahit.id')
-  );
+  const userName = $derived(currentUser?.name || currentUser?.email || '—');
+  const userEmail = $derived(currentUser?.email || '');
+  const wsInitial = $derived((workspaceName || '?').trim().charAt(0).toUpperCase());
   const userInitials = $derived(
     userName
       .split(' ')
@@ -95,19 +94,12 @@
       <div class="mb-4 rounded-2xl border border-white/60 bg-white/40 p-2.5 dark:border-white/10 dark:bg-white/5 backdrop-blur-sm transition-all shadow-2xs">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
-            <div class="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700">
-              <img
-                src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=120&h=120&fit=crop"
-                alt="MauJahit"
-                class="h-full w-full object-cover"
-              />
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-sm font-bold text-brand-600 dark:text-brand-400" aria-hidden="true">
+              {wsInitial}
             </div>
             <div class="min-w-0 flex-1">
-              <h2 class="truncate text-xs font-bold text-slate-900 dark:text-white">MauJahit.id</h2>
-              <div class="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                <span>{isLangEn ? 'Assisted' : 'Mode Terpandu'}</span>
-              </div>
+              <h2 class="truncate text-xs font-bold text-slate-900 dark:text-white">{workspaceName || '—'}</h2>
+              <p class="truncate text-[10px] font-medium capitalize text-slate-500 dark:text-slate-400">{currentRole}</p>
             </div>
           </div>
 
@@ -127,14 +119,10 @@
       <!-- Collapsed Brand Header -->
       <div class="mb-4 flex flex-col items-center gap-2">
         <div
-          class="h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 shadow-xs"
-          title="MauJahit.id • Mode Terpandu"
+          class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-500/15 text-sm font-bold text-brand-600 dark:text-brand-400"
+          title={workspaceName}
         >
-          <img
-            src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=120&h=120&fit=crop"
-            alt="MauJahit"
-            class="h-full w-full object-cover"
-          />
+          {wsInitial}
         </div>
 
         <!-- Expand Trigger Button -->
@@ -219,15 +207,8 @@
         title="Lihat detail penggunaan kuota"
       >
         <div class="flex items-center justify-between text-xs">
-          <span class="font-medium text-slate-500 dark:text-slate-400">{isLangEn ? 'AI Quota' : 'Kuota AI'}</span>
-          <span class="font-mono text-[11px] font-bold text-slate-800 dark:text-slate-200">1.420 / 5.450</span>
-        </div>
-        <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-          <div class="h-full rounded-full bg-brand-500 transition-all duration-300" style="width: 26%"></div>
-        </div>
-        <div class="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500">
-          <span>26% Terpakai</span>
-          <span class="text-emerald-600 dark:text-emerald-400 font-medium">Aktif</span>
+          <span class="font-medium text-slate-500 dark:text-slate-400">{isLangEn ? 'AI quota & plan' : 'Kuota AI & paket'}</span>
+          <span class="text-slate-400">→</span>
         </div>
       </a>
 

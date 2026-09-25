@@ -73,14 +73,14 @@ export const api = {
   },
 
   // 3. Workspace Members (PostgreSQL memberships & users join)
-  async getMembers(ws: string = 'maujahit'): Promise<Array<{ id: string; name: string; email: string; avatarUrl?: string; role: string; createdAt?: string }>> {
+  async getMembers(ws: string): Promise<Array<{ id: string; name: string; email: string; avatarUrl?: string; role: string; createdAt?: string }>> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/members`);
     if (!res.ok) throw new Error('Gagal mengambil anggota tim workspace');
     return await res.json();
   },
 
   async inviteMember(
-    ws: string = 'maujahit',
+    ws: string,
     payload: { email: string; role: string; name?: string }
   ): Promise<any> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/members`, {
@@ -93,7 +93,7 @@ export const api = {
   },
 
   // 4. Dashboard Summary & Trends (PostgreSQL comments, classifications & daily_metrics)
-  async getSummary(ws: string = 'maujahit'): Promise<DashboardSummary> {
+  async getSummary(ws: string): Promise<DashboardSummary> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/dashboard/summary`);
     if (!res.ok) {
       return {
@@ -111,7 +111,7 @@ export const api = {
     return await res.json();
   },
 
-  async getTrends(ws: string = 'maujahit'): Promise<DailyMetric[]> {
+  async getTrends(ws: string): Promise<DailyMetric[]> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/dashboard/trend`);
     if (!res.ok) return [];
     return await res.json();
@@ -119,7 +119,7 @@ export const api = {
 
   // 5. Comments & Moderation (PostgreSQL comments & classifications)
   async getComments(
-    ws: string = 'maujahit',
+    ws: string,
     filters?: {
       platform?: string;
       sentiment?: string;
@@ -145,13 +145,13 @@ export const api = {
   },
 
   // 6. Review Queue (PostgreSQL comments where status = 'NEEDS_REVIEW')
-  async getReviewQueue(ws: string = 'maujahit'): Promise<CommentItem[]> {
+  async getReviewQueue(ws: string): Promise<CommentItem[]> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review`);
     if (!res.ok) return [];
     return await res.json();
   },
 
-  async approveReview(ws: string = 'maujahit', commentId: string, text?: string): Promise<boolean> {
+  async approveReview(ws: string, commentId: string, text?: string): Promise<boolean> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -160,7 +160,7 @@ export const api = {
     return res.ok;
   },
 
-  async regenerateReview(ws: string = 'maujahit', commentId: string): Promise<string> {
+  async regenerateReview(ws: string, commentId: string): Promise<string> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/regenerate`, {
       method: 'POST'
     });
@@ -169,21 +169,21 @@ export const api = {
     return data.draftText;
   },
 
-  async hideReview(ws: string = 'maujahit', commentId: string): Promise<boolean> {
+  async hideReview(ws: string, commentId: string): Promise<boolean> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/hide`, {
       method: 'POST'
     });
     return res.ok;
   },
 
-  async dismissReview(ws: string = 'maujahit', commentId: string): Promise<boolean> {
+  async dismissReview(ws: string, commentId: string): Promise<boolean> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/dismiss`, {
       method: 'POST'
     });
     return res.ok;
   },
 
-  async correctLabel(ws: string = 'maujahit', commentId: string, sentiment: string, riskLabel: string): Promise<boolean> {
+  async correctLabel(ws: string, commentId: string, sentiment: string, riskLabel: string): Promise<boolean> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/comments/${commentId}/label`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -193,26 +193,14 @@ export const api = {
   },
 
   // 7. Social Accounts (PostgreSQL social_accounts & reply_policies)
-  async getAccounts(ws: string = 'maujahit'): Promise<SocialAccount[]> {
+  async getAccounts(ws: string): Promise<SocialAccount[]> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts`);
     if (!res.ok) return [];
     return await res.json();
   },
 
-  async connectAccount(
-    ws: string = 'maujahit',
-    payload: { platform: string; externalId: string; username: string; accessToken: string; avatarUrl?: string }
-  ): Promise<SocialAccount> {
-    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/meta`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error('Gagal menghubungkan akun media sosial');
-    return await res.json();
-  },
 
-  async disconnectAccount(ws: string = 'maujahit', accountId: string): Promise<boolean> {
+  async disconnectAccount(ws: string, accountId: string): Promise<boolean> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}`, {
       method: 'DELETE'
     });
@@ -220,7 +208,7 @@ export const api = {
   },
 
   /** Instagram Login: authorize URL (with signed state) for the "Hubungkan Instagram" button. */
-  async getInstagramConnectUrl(ws: string = 'maujahit'): Promise<{ url: string; redirectUri: string }> {
+  async getInstagramConnectUrl(ws: string): Promise<{ url: string; redirectUri: string }> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal menyiapkan koneksi Instagram');
@@ -228,7 +216,7 @@ export const api = {
   },
 
   /** Exchange the ?code from Instagram's redirect and connect the account. */
-  async connectInstagram(ws: string = 'maujahit', code: string, state?: string): Promise<SocialAccount> {
+  async connectInstagram(ws: string, code: string, state?: string): Promise<SocialAccount> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -240,18 +228,18 @@ export const api = {
   },
 
   /** Queue an immediate poll of the account's latest posts/comments. */
-  async syncAccount(ws: string = 'maujahit', accountId: string): Promise<void> {
+  async syncAccount(ws: string, accountId: string): Promise<void> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/sync`, { method: 'POST' });
     if (!res.ok) throw new Error('Gagal memulai sinkronisasi');
   },
 
-  async getPolicy(ws: string = 'maujahit', accountId: string): Promise<ReplyPolicy> {
+  async getPolicy(ws: string, accountId: string): Promise<ReplyPolicy> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`);
     if (!res.ok) throw new Error('Gagal mengambil konfigurasi aturan');
     return await res.json();
   },
 
-  async updatePolicy(ws: string = 'maujahit', accountId: string, policy: ReplyPolicy): Promise<ReplyPolicy> {
+  async updatePolicy(ws: string, accountId: string, policy: ReplyPolicy): Promise<ReplyPolicy> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -262,7 +250,7 @@ export const api = {
   },
 
   async previewPolicy(
-    ws: string = 'maujahit',
+    ws: string,
     accountId: string,
     payload: {
       sampleComment: string;
@@ -285,13 +273,13 @@ export const api = {
   },
 
   // 8. Reports & Analytics (PostgreSQL daily_metrics & posts)
-  async getReports(ws: string = 'maujahit', period: string = 'daily') {
+  async getReports(ws: string, period: string = 'daily') {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/reports?period=${period}`);
     if (!res.ok) return { period, metrics: [], topPosts: [] };
     return await res.json();
   },
 
-  exportCsvUrl(ws: string = 'maujahit'): string {
+  exportCsvUrl(ws: string): string {
     return `${API_BASE}/api/v1/workspaces/${ws}/reports/export.csv`;
   },
 
@@ -302,7 +290,7 @@ export const api = {
     return await res.json();
   },
 
-  async getBilling(ws: string = 'maujahit') {
+  async getBilling(ws: string) {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing`);
     if (!res.ok) {
       return {
@@ -317,7 +305,7 @@ export const api = {
     return await res.json();
   },
 
-  async checkout(ws: string = 'maujahit', payload: { kind: string; planId?: string; aiUnits?: number }) {
+  async checkout(ws: string, payload: { kind: string; planId?: string; aiUnits?: number }) {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -328,7 +316,7 @@ export const api = {
   },
 
   // 10. Audit Logs (PostgreSQL audit_logs)
-  async getAuditLogs(ws: string = 'maujahit'): Promise<AuditLogItem[]> {
+  async getAuditLogs(ws: string): Promise<AuditLogItem[]> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/audit-logs`);
     if (!res.ok) return [];
     return await res.json();

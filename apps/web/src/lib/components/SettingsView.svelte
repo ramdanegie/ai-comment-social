@@ -16,7 +16,7 @@
   import { toast } from '$lib/toast';
 
   let {
-    workspaceSlug = 'maujahit',
+    workspaceSlug = '',
     isLangEn = false
   }: {
     workspaceSlug?: string;
