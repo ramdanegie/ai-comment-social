@@ -42,15 +42,27 @@ Replyra memilih host otomatis per akun (dari scope yang tersimpan), jadi kedua j
 
 > Tombol **Generate token** di dashboard membuka popup. Kalau popup diblokir, token bawaan dashboard tidak bisa diambil — pakai IG-2 di bawah (tidak butuh popup).
 
-### IG-2. Ambil kode otorisasi
+### IG-2. Hubungkan dari aplikasi (disarankan)
+
+1. Buka **`/accounts` → Hubungkan Instagram**.
+2. Klik **Lanjut ke Instagram** → login akun IG yang dimaksud → **Allow**.
+3. Instagram mengarahkan ke `META_IG_REDIRECT_URI`:
+   - **Web berjalan di domain itu** (mis. `https://ai-comment-social.vercel.app/`) → otomatis diteruskan ke `/accounts/instagram/callback` dan akun langsung terhubung.
+   - **Web berjalan di tempat lain** (mis. `localhost`) → salin URL lengkap hasil redirect (`…/?code=…&state=…`), tempel di modal → **Hubungkan**.
+4. Akun tersimpan dalam mode **Shadow** dan langsung di-polling.
+
+> URL izin dan penukaran kode dibuat dari `META_IG_REDIRECT_URI` yang sama, jadi error *redirect_uri is identical* tidak akan terjadi selama nilainya sama dengan yang terdaftar di Meta (IG-1 no. 5).
+> Kode berlaku 1 jam dan **sekali pakai** — percobaan yang gagal pun menghabiskan kode; ulangi dari tombol.
+
+### IG-2b. Ambil kode otorisasi secara manual (alternatif CLI)
 
 Buka di browser (login ke akun IG yang dimaksud), ganti `IG_APP_ID` dan `REDIRECT` (URL-encoded):
 
 ```
-https://www.instagram.com/oauth/authorize?client_id=IG_APP_ID&redirect_uri=https%3A%2F%2Fcreativeshine.id%2F&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_comments
+https://www.instagram.com/oauth/authorize?client_id=IG_APP_ID&redirect_uri=REDIRECT_URL_ENCODED&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_comments
 ```
 
-Klik **Allow** → browser pindah ke `https://creativeshine.id/?code=AQB…#_`.
+Klik **Allow** → browser pindah ke `META_IG_REDIRECT_URI?code=AQB…#_`. `redirect_uri` di URL ini **harus sama persis** dengan `META_IG_REDIRECT_URI`.
 Salin nilai `code` (tanpa `#_`). **Berlaku ±1 jam dan hanya sekali pakai.**
 
 ### IG-3. Sisi aplikasi
