@@ -5,6 +5,8 @@
 //   bun scripts/meta-dev.ts connect    <workspace> <user_token>  → exchange to long-lived, save Page + IG accounts
 //   bun scripts/meta-dev.ts connect-ig <workspace> <ig_token>    → Instagram Login token (no Facebook Page needed)
 //   bun scripts/meta-dev.ts connect-ig-code <workspace> <code>   → exchange ?code= from Instagram business login redirect, then connect
+//   bun scripts/meta-dev.ts accounts                          → list connected accounts + ids
+//   bun scripts/meta-dev.ts diagnose <social_account_id>      → comments_count (Meta) vs comments returned by the API
 //   bun scripts/meta-dev.ts poll    <social_account_id>       → poll once now (no worker needed)
 //   bun scripts/meta-dev.ts comments <social_account_id>      → print latest remote posts + comments (read-only)
 //
@@ -35,6 +37,8 @@ function usage(): never {
   bun scripts/meta-dev.ts connect    <workspace_slug> <user_token>
   bun scripts/meta-dev.ts connect-ig <workspace_slug> <ig_token>
   bun scripts/meta-dev.ts connect-ig-code <workspace_slug> <code>
+  bun scripts/meta-dev.ts accounts
+  bun scripts/meta-dev.ts diagnose <social_account_id>
   bun scripts/meta-dev.ts poll     <social_account_id>
   bun scripts/meta-dev.ts comments <social_account_id>`);
   process.exit(1);
@@ -109,6 +113,14 @@ async function upsertAccount(
   return acc;
 }
 
+/** comments_count as Instagram reports it (includes comments the API may not return). */
+async function getCommentsCount(mediaId: string, token: string, api: 'facebook_login' | 'instagram_login') {
+  const host = api === 'instagram_login' ? 'graph.instagram.com' : 'graph.facebook.com';
+  const v = process.env.META_GRAPH_VERSION || 'v25.0';
+  const res = (await (await fetch(`https://${host}/${v}/${mediaId}?fields=comments_count&access_token=${token}`)).json()) as any;
+  return Number(res.comments_count ?? 0);
+}
+
 async function main() {
   switch (cmd) {
     case 'pages': {
@@ -167,6 +179,42 @@ async function main() {
       }
       const acc = await connectInstagramAccount(ws.id, token, expiresAt);
       console.log(`✓ instagram @${acc.username} → social_account ${acc.id}`);
+      break;
+    }
+
+    case 'accounts': {
+      const rows = await db
+        .select({
+          id: schema.socialAccounts.id,
+          platform: schema.socialAccounts.platform,
+          username: schema.socialAccounts.username,
+          status: schema.socialAccounts.status,
+          lastSyncedAt: schema.socialAccounts.lastSyncedAt
+        })
+        .from(schema.socialAccounts);
+      for (const r of rows) {
+        console.log(`${r.id}  ${r.platform.padEnd(9)} @${r.username.padEnd(24)} ${r.status.padEnd(9)} synced: ${r.lastSyncedAt?.toLocaleString('id-ID') ?? '-'}`);
+      }
+      break;
+    }
+
+    case 'diagnose': {
+      // Shows whether Meta hides comments: comments_count (what Instagram counts) vs what /comments returns.
+      if (!args[0]) usage();
+      const acc = await db.query.socialAccounts.findFirst({ where: eq(schema.socialAccounts.id, args[0]) });
+      if (!acc || !isMetaPlatform(acc.platform)) throw new Error('Meta social account not found');
+      const token = decryptToken(acc.accessTokenEnc);
+      const api = metaApiFor(acc);
+      console.log(`@${acc.username} via ${api}\n`);
+      console.log('POST DATE   COUNT  RETURNED  CAPTION');
+      for (const post of await MetaGraph.listPosts(acc.platform, acc.externalId, token, 10, api)) {
+        const count = await getCommentsCount(post.externalId, token, api);
+        const comments = await MetaGraph.listComments(acc.platform, post.externalId, token, api);
+        const flag = count > comments.length ? '  ⚠ hidden by Meta' : '';
+        console.log(`${post.publishedAt?.toISOString().slice(0, 10) ?? '?'}  ${String(count).padStart(5)}  ${String(comments.length).padStart(8)}  ${(post.caption ?? '').slice(0, 30)}${flag}`);
+        for (const c of comments) console.log(`              ↳ @${c.authorName ?? '?'}: ${c.text.slice(0, 60)}`);
+      }
+      console.log('\nCOUNT > RETURNED → Instagram counts the comments but the API withholds them (dev mode / Standard Access).');
       break;
     }
 
