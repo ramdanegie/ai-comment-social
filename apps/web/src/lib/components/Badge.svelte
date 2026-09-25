@@ -19,7 +19,7 @@
 
   const riskStyles: Record<RiskLabel, { bg: string; text: string; border: string; label: string }> = {
     none: { bg: 'bg-slate-500/10 dark:bg-slate-800/60', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-200/80 dark:border-slate-700/60', label: 'Aman' },
-    spam: { bg: 'bg-violet-500/10 dark:bg-violet-500/15', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-500/20 dark:border-violet-500/30', label: 'Spam' },
+    spam: { bg: 'bg-red-500/10 dark:bg-red-500/15', text: 'text-red-700 dark:text-red-300', border: 'border-red-500/20 dark:border-red-500/30', label: 'Spam' },
     toxic: { bg: 'bg-rose-500/10 dark:bg-rose-500/20', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-500/20 dark:border-rose-500/30', label: 'Kasar' },
     hate: { bg: 'bg-rose-500/15 dark:bg-rose-500/25', text: 'text-rose-700 dark:text-rose-200 font-semibold', border: 'border-rose-500/30 dark:border-rose-500/40', label: 'SARA / Kebencian' },
     threat: { bg: 'bg-rose-500/20 dark:bg-rose-500/30', text: 'text-rose-700 dark:text-rose-200 font-bold', border: 'border-rose-500/40 dark:border-rose-500/50', label: 'Ancaman' },

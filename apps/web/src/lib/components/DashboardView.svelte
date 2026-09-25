@@ -54,7 +54,7 @@
           { key: 'neutral', label: isLangEn ? 'Neutral' : 'Netral', value: summary.neutral, dot: 'bg-slate-400' },
           { key: 'negative', label: isLangEn ? 'Negative' : 'Negatif', value: summary.negative, dot: 'bg-amber-500' },
           { key: 'risk', label: isLangEn ? 'Risk' : 'Berisiko', value: summary.risk, dot: 'bg-rose-500' },
-          { key: 'spam', label: 'Spam', value: summary.spam, dot: 'bg-violet-500' }
+          { key: 'spam', label: 'Spam', value: summary.spam, dot: 'bg-red-500' }
         ]
       : []
   );

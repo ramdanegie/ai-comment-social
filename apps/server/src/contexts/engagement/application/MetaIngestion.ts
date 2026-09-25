@@ -3,11 +3,18 @@
 
 import { db, schema } from '@replyra/db';
 import { and, eq, gte, sql } from 'drizzle-orm';
-import { MetaGraph, MetaGraphError, type MetaPlatform, type NormalizedComment } from '../../channel/infrastructure/MetaGraphClient';
+import {
+  MetaGraph,
+  MetaGraphError,
+  metaApiFor,
+  refreshInstagramToken,
+  type MetaPlatform,
+  type NormalizedComment
+} from '../../channel/infrastructure/MetaGraphClient';
 import { LlmClassifier } from '../../moderation/domain/LlmClassifier';
 import { LlmReplyGenerator } from '../../response/domain/LlmReplyGenerator';
 import { ReplyPolicyEvaluator, type ReplyPolicyEntity } from '../../response/domain/ReplyPolicyEvaluator';
-import { decryptToken } from '../../../shared/infrastructure/crypto';
+import { decryptToken, encryptToken } from '../../../shared/infrastructure/crypto';
 
 const POSTS_PER_POLL = Number(process.env.META_POLL_POSTS || 10);
 /** META_DRY_RUN=true → never call reply/hide on Meta, only log. Safe default for first tests. */
@@ -38,19 +45,42 @@ export async function enqueueJob(type: string, payload: Record<string, unknown>,
 
 // ---------- Polling ----------
 
+const REFRESH_BEFORE_MS = 7 * 24 * 3600 * 1000;
+
+/** Instagram Login tokens live 60 days; refresh during the last week so polling never stops. */
+async function ensureFreshToken(account: SocialAccount): Promise<string> {
+  const token = decryptToken(account.accessTokenEnc);
+  if (metaApiFor(account) !== 'instagram_login' || !account.tokenExpiresAt) return token;
+  if (account.tokenExpiresAt.getTime() - Date.now() > REFRESH_BEFORE_MS) return token;
+
+  try {
+    const res = await refreshInstagramToken(token);
+    await db
+      .update(schema.socialAccounts)
+      .set({ accessTokenEnc: encryptToken(res.access_token), tokenExpiresAt: new Date(Date.now() + res.expires_in * 1000) })
+      .where(eq(schema.socialAccounts.id, account.id));
+    await audit(account.workspaceId, 'account.token_refreshed', 'social_account', account.id);
+    return res.access_token;
+  } catch (err) {
+    console.warn(`[MetaIngestion] token refresh failed for ${account.id}: ${(err as Error).message}`);
+    return token; // still valid until tokenExpiresAt; 190 on use marks it expired
+  }
+}
+
 export async function pollAccount(accountId: string) {
   const account = await db.query.socialAccounts.findFirst({ where: eq(schema.socialAccounts.id, accountId) });
   if (!account || account.status !== 'connected' || !isMetaPlatform(account.platform)) return { skipped: true };
 
-  const token = decryptToken(account.accessTokenEnc);
+  const api = metaApiFor(account);
   let newCount = 0;
 
   try {
-    const remotePosts = await MetaGraph.listPosts(account.platform, account.externalId, token, POSTS_PER_POLL);
+    const token = await ensureFreshToken(account);
+    const remotePosts = await MetaGraph.listPosts(account.platform, account.externalId, token, POSTS_PER_POLL, api);
 
     for (const rp of remotePosts) {
       const post = await upsertPost(account, rp);
-      const remoteComments = await MetaGraph.listComments(account.platform, rp.externalId, token);
+      const remoteComments = await MetaGraph.listComments(account.platform, rp.externalId, token, api);
       for (const rc of remoteComments) {
         if (await ingestComment(account, post, rc)) newCount++;
       }
@@ -211,12 +241,12 @@ async function loadCommentContext(commentId: string) {
     where: eq(schema.socialAccounts.id, comment.socialAccountId)
   });
   if (!account || !isMetaPlatform(account.platform)) throw new Error(`Meta account for comment ${commentId} not found`);
-  return { comment, account, platform: account.platform as MetaPlatform };
+  return { comment, account, platform: account.platform as MetaPlatform, api: metaApiFor(account) };
 }
 
 /** Idempotent (§5.4): a reply that already has externalReplyId is never sent again (invariant §4.3-3). */
 export async function sendReply(commentId: string) {
-  const { comment, account, platform } = await loadCommentContext(commentId);
+  const { comment, account, platform, api } = await loadCommentContext(commentId);
   const reply = await db.query.replies.findFirst({ where: eq(schema.replies.commentId, commentId) });
   if (!reply) throw new Error(`No reply draft for comment ${commentId}`);
   if (reply.externalReplyId) return { alreadySent: true };
@@ -228,7 +258,7 @@ export async function sendReply(commentId: string) {
     if (DRY_RUN) {
       console.log(`[DRY_RUN] ${platform} reply to ${comment.externalId}: ${text}`);
     } else {
-      const res = await MetaGraph.reply(platform, comment.externalId, text, decryptToken(account.accessTokenEnc));
+      const res = await MetaGraph.reply(platform, comment.externalId, text, decryptToken(account.accessTokenEnc), api);
       externalReplyId = res.id;
     }
   } catch (err) {
@@ -250,13 +280,13 @@ export async function sendReply(commentId: string) {
 }
 
 export async function hideComment(commentId: string, hide: boolean) {
-  const { comment, account, platform } = await loadCommentContext(commentId);
+  const { comment, account, platform, api } = await loadCommentContext(commentId);
 
   if (DRY_RUN) {
     console.log(`[DRY_RUN] ${platform} ${hide ? 'hide' : 'unhide'} ${comment.externalId}`);
   } else {
     try {
-      await MetaGraph.hide(platform, comment.externalId, hide, decryptToken(account.accessTokenEnc));
+      await MetaGraph.hide(platform, comment.externalId, hide, decryptToken(account.accessTokenEnc), api);
     } catch (err) {
       if (err instanceof MetaGraphError && err.isTokenInvalid) await markAccountExpired(account, err);
       throw err;

@@ -1,18 +1,24 @@
 #!/usr/bin/env bun
 // Dev-mode helper for Meta (Jalur A): works for assets owned by users with an App Role, no App Review needed.
 //
-//   bun scripts/meta-dev.ts pages   <user_token>              → list Pages + linked IG accounts
-//   bun scripts/meta-dev.ts connect <workspace> <user_token>  → exchange to long-lived, save Page + IG accounts
+//   bun scripts/meta-dev.ts pages      <user_token>              → list Pages + linked IG accounts
+//   bun scripts/meta-dev.ts connect    <workspace> <user_token>  → exchange to long-lived, save Page + IG accounts
+//   bun scripts/meta-dev.ts connect-ig <workspace> <ig_token>    → Instagram Login token (no Facebook Page needed)
 //   bun scripts/meta-dev.ts poll    <social_account_id>       → poll once now (no worker needed)
 //   bun scripts/meta-dev.ts comments <social_account_id>      → print latest remote posts + comments (read-only)
 //
 // <user_token> = short-lived User Token from Graph API Explorer (or already long-lived).
+// <ig_token>   = Instagram User token from App Dashboard → Instagram use case → Generate token (60 days).
+// Tokens can also be passed via META_TOKEN=... to keep them out of shell history.
 
 import { db, schema, client } from '@replyra/db';
 import { eq } from 'drizzle-orm';
 import {
   exchangeForLongLivedUserToken,
+  exchangeInstagramToken,
+  getInstagramLoginProfile,
   listPagesWithInstagram,
+  metaApiFor,
   MetaGraph,
   type MetaPage
 } from '../src/contexts/channel/infrastructure/MetaGraphClient';
@@ -20,11 +26,13 @@ import { isMetaPlatform, pollAccount } from '../src/contexts/engagement/applicat
 import { decryptToken, encryptToken } from '../src/shared/infrastructure/crypto';
 
 const [cmd, ...args] = process.argv.slice(2);
+const tokenArg = (i: number) => args[i] || process.env.META_TOKEN || '';
 
 function usage(): never {
   console.log(`Usage:
-  bun scripts/meta-dev.ts pages    <user_token>
-  bun scripts/meta-dev.ts connect  <workspace_slug> <user_token>
+  bun scripts/meta-dev.ts pages      <user_token>
+  bun scripts/meta-dev.ts connect    <workspace_slug> <user_token>
+  bun scripts/meta-dev.ts connect-ig <workspace_slug> <ig_token>
   bun scripts/meta-dev.ts poll     <social_account_id>
   bun scripts/meta-dev.ts comments <social_account_id>`);
   process.exit(1);
@@ -59,7 +67,8 @@ async function upsertAccount(
   externalId: string,
   username: string,
   avatarUrl: string | undefined,
-  pageToken: string
+  pageToken: string,
+  opts: { scopes?: string[]; tokenExpiresAt?: Date | null } = {}
 ) {
   const values = {
     workspaceId,
@@ -68,11 +77,12 @@ async function upsertAccount(
     username,
     avatarUrl,
     accessTokenEnc: encryptToken(pageToken),
-    tokenExpiresAt: null, // Page token from a long-lived user token does not expire
+    tokenExpiresAt: opts.tokenExpiresAt ?? null, // Page token from a long-lived user token does not expire
     scopes:
-      platform === 'instagram'
+      opts.scopes ??
+      (platform === 'instagram'
         ? ['instagram_basic', 'instagram_manage_comments', 'pages_read_engagement']
-        : ['pages_read_engagement', 'pages_read_user_content', 'pages_manage_engagement'],
+        : ['pages_read_engagement', 'pages_read_user_content', 'pages_manage_engagement']),
     status: 'connected'
   };
 
@@ -100,13 +110,14 @@ async function upsertAccount(
 async function main() {
   switch (cmd) {
     case 'pages': {
-      if (!args[0]) usage();
-      printPages(await listPagesWithInstagram(await longLived(args[0])));
+      if (!tokenArg(0)) usage();
+      printPages(await listPagesWithInstagram(await longLived(tokenArg(0))));
       break;
     }
 
     case 'connect': {
-      const [slug, token] = args;
+      const slug = args[0];
+      const token = tokenArg(1);
       if (!slug || !token) usage();
       const ws = await db.query.workspaces.findFirst({ where: eq(schema.workspaces.slug, slug) });
       if (!ws) throw new Error(`Workspace "${slug}" not found`);
@@ -122,6 +133,36 @@ async function main() {
       break;
     }
 
+    case 'connect-ig': {
+      const slug = args[0];
+      let token = tokenArg(1);
+      if (!slug || !token) usage();
+      const ws = await db.query.workspaces.findFirst({ where: eq(schema.workspaces.slug, slug) });
+      if (!ws) throw new Error(`Workspace "${slug}" not found`);
+
+      // Dashboard tokens are already long-lived; Business Login tokens (1h) need the exchange.
+      let expiresAt = new Date(Date.now() + 60 * 24 * 3600 * 1000);
+      if (process.env.META_IG_APP_SECRET) {
+        try {
+          const res = await exchangeInstagramToken(token);
+          token = res.access_token;
+          expiresAt = new Date(Date.now() + res.expires_in * 1000);
+          console.log(`✓ Long-lived Instagram token (~${Math.round(res.expires_in / 86400)} days)`);
+        } catch {
+          console.log('• Token already long-lived (exchange skipped)');
+        }
+      }
+
+      const me = await getInstagramLoginProfile(token);
+      console.log(`• Instagram @${me.username} (${me.userId})`);
+      await upsertAccount(ws.id, 'instagram', me.userId, me.username, me.avatarUrl, token, {
+        scopes: ['instagram_business_basic', 'instagram_business_manage_comments'],
+        tokenExpiresAt: expiresAt
+      });
+      console.log('\nNext: `poll <social_account_id>` or run the worker.');
+      break;
+    }
+
     case 'poll': {
       if (!args[0]) usage();
       console.log(await pollAccount(args[0]));
@@ -133,9 +174,10 @@ async function main() {
       const acc = await db.query.socialAccounts.findFirst({ where: eq(schema.socialAccounts.id, args[0]) });
       if (!acc || !isMetaPlatform(acc.platform)) throw new Error('Meta social account not found');
       const token = decryptToken(acc.accessTokenEnc);
-      for (const post of await MetaGraph.listPosts(acc.platform, acc.externalId, token, 5)) {
+      const api = metaApiFor(acc);
+      for (const post of await MetaGraph.listPosts(acc.platform, acc.externalId, token, 5, api)) {
         console.log(`\n■ ${post.externalId}  ${post.caption?.slice(0, 60) ?? ''}\n  ${post.permalink ?? ''}`);
-        for (const c of await MetaGraph.listComments(acc.platform, post.externalId, token)) {
+        for (const c of await MetaGraph.listComments(acc.platform, post.externalId, token, api)) {
           console.log(`  - [${c.externalId}] ${c.authorName ?? '?'}: ${c.text}`);
         }
       }

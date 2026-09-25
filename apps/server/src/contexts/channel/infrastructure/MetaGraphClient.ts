@@ -1,8 +1,20 @@
-// Meta Graph API adapter — Instagram API with Facebook Login + Facebook Pages API (PRD FR-2/FR-3).
-// Host: graph.facebook.com. Tokens: Page access token (works for both the Page and its linked IG account).
+// Meta Graph API adapter (PRD FR-2/FR-3). Two ways to reach an Instagram account:
+//  - 'facebook_login'  → graph.facebook.com, Page access token (IG must be linked to a Facebook Page).
+//  - 'instagram_login' → graph.instagram.com, Instagram User token (no Page needed; instagram_business_* scopes).
+// Facebook Pages always use 'facebook_login'.
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v25.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const IG_GRAPH_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
+
+export type MetaApi = 'facebook_login' | 'instagram_login';
+
+const baseFor = (api: MetaApi) => (api === 'instagram_login' ? IG_GRAPH_BASE : GRAPH_BASE);
+
+/** Accounts connected through Instagram Login carry instagram_business_* scopes. */
+export function metaApiFor(account: { scopes?: string[] | null }): MetaApi {
+  return account.scopes?.some((s) => s.startsWith('instagram_business_')) ? 'instagram_login' : 'facebook_login';
+}
 
 export class MetaGraphError extends Error {
   constructor(
@@ -28,13 +40,13 @@ export class MetaGraphError extends Error {
 
 type Params = Record<string, string | number | boolean | undefined>;
 
-async function graph<T>(method: 'GET' | 'POST', path: string, params: Params): Promise<T> {
+async function graph<T>(method: 'GET' | 'POST', path: string, params: Params, base = GRAPH_BASE): Promise<T> {
   const search = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined) search.set(k, String(v));
   }
 
-  const url = method === 'GET' ? `${GRAPH_BASE}${path}?${search}` : `${GRAPH_BASE}${path}`;
+  const url = method === 'GET' ? `${base}${path}?${search}` : `${base}${path}`;
   const res = await fetch(url, {
     method,
     body: method === 'POST' ? search : undefined,
@@ -102,12 +114,18 @@ export async function listPagesWithInstagram(userToken: string): Promise<MetaPag
 
 // ---------- Instagram ----------
 
-export async function listInstagramMedia(igUserId: string, token: string, limit = 20): Promise<NormalizedPost[]> {
-  const res = await graph<{ data: any[] }>('GET', `/${igUserId}/media`, {
-    fields: 'id,caption,permalink,media_url,thumbnail_url,timestamp',
-    limit,
-    access_token: token
-  });
+export async function listInstagramMedia(
+  igUserId: string,
+  token: string,
+  limit = 20,
+  api: MetaApi = 'facebook_login'
+): Promise<NormalizedPost[]> {
+  const res = await graph<{ data: any[] }>(
+    'GET',
+    `/${igUserId}/media`,
+    { fields: 'id,caption,permalink,media_url,thumbnail_url,timestamp', limit, access_token: token },
+    baseFor(api)
+  );
   return res.data.map((m) => ({
     externalId: m.id,
     caption: m.caption ?? null,
@@ -118,12 +136,18 @@ export async function listInstagramMedia(igUserId: string, token: string, limit 
 }
 
 /** Top-level comments only; replies (including our own) are not ingested. */
-export async function listInstagramComments(mediaId: string, token: string, limit = 50): Promise<NormalizedComment[]> {
-  const res = await graph<{ data: any[] }>('GET', `/${mediaId}/comments`, {
-    fields: 'id,text,username,timestamp,from{id,username}',
-    limit,
-    access_token: token
-  });
+export async function listInstagramComments(
+  mediaId: string,
+  token: string,
+  limit = 50,
+  api: MetaApi = 'facebook_login'
+): Promise<NormalizedComment[]> {
+  const res = await graph<{ data: any[] }>(
+    'GET',
+    `/${mediaId}/comments`,
+    { fields: 'id,text,username,timestamp,from{id,username}', limit, access_token: token },
+    baseFor(api)
+  );
   return res.data.map((c) => ({
     externalId: c.id,
     text: c.text ?? '',
@@ -133,12 +157,48 @@ export async function listInstagramComments(mediaId: string, token: string, limi
   }));
 }
 
-export async function replyToInstagramComment(commentId: string, message: string, token: string) {
-  return graph<{ id: string }>('POST', `/${commentId}/replies`, { message, access_token: token });
+export async function replyToInstagramComment(commentId: string, message: string, token: string, api: MetaApi = 'facebook_login') {
+  return graph<{ id: string }>('POST', `/${commentId}/replies`, { message, access_token: token }, baseFor(api));
 }
 
-export async function hideInstagramComment(commentId: string, hide: boolean, token: string) {
-  return graph<{ success: boolean }>('POST', `/${commentId}`, { hide, access_token: token });
+export async function hideInstagramComment(commentId: string, hide: boolean, token: string, api: MetaApi = 'facebook_login') {
+  return graph<{ success: boolean }>('POST', `/${commentId}`, { hide, access_token: token }, baseFor(api));
+}
+
+// ---------- Instagram Login (graph.instagram.com) ----------
+
+/** Profile of the IG professional account behind an Instagram User token. */
+export async function getInstagramLoginProfile(token: string) {
+  const res = await graph<any>(
+    'GET',
+    '/me',
+    { fields: 'user_id,username,profile_picture_url', access_token: token },
+    IG_GRAPH_BASE
+  );
+  const me = Array.isArray(res.data) ? res.data[0] : res;
+  return { userId: String(me.user_id ?? me.id), username: me.username as string, avatarUrl: me.profile_picture_url as string | undefined };
+}
+
+/** Short-lived (1h, from Business Login) → long-lived (60d). Tokens generated in the App Dashboard are already long-lived. */
+export async function exchangeInstagramToken(shortLivedToken: string) {
+  const secret = process.env.META_IG_APP_SECRET;
+  if (!secret) throw new Error('META_IG_APP_SECRET is required to exchange Instagram tokens');
+  return graph<{ access_token: string; expires_in: number }>(
+    'GET',
+    '/access_token',
+    { grant_type: 'ig_exchange_token', client_secret: secret, access_token: shortLivedToken },
+    'https://graph.instagram.com'
+  );
+}
+
+/** Long-lived token must be ≥24h old and unexpired; returns a fresh 60-day token. */
+export async function refreshInstagramToken(longLivedToken: string) {
+  return graph<{ access_token: string; expires_in: number }>(
+    'GET',
+    '/refresh_access_token',
+    { grant_type: 'ig_refresh_token', access_token: longLivedToken },
+    'https://graph.instagram.com'
+  );
 }
 
 // ---------- Facebook Page ----------
@@ -189,21 +249,23 @@ export async function hidePageComment(commentId: string, hide: boolean, token: s
 export type MetaPlatform = 'instagram' | 'facebook';
 
 export const MetaGraph = {
-  listPosts: (platform: MetaPlatform, accountExternalId: string, token: string, limit?: number) =>
+  listPosts: (platform: MetaPlatform, accountExternalId: string, token: string, limit?: number, api?: MetaApi) =>
     platform === 'instagram'
-      ? listInstagramMedia(accountExternalId, token, limit)
+      ? listInstagramMedia(accountExternalId, token, limit, api)
       : listPagePosts(accountExternalId, token, limit),
 
-  listComments: (platform: MetaPlatform, postExternalId: string, token: string) =>
-    platform === 'instagram' ? listInstagramComments(postExternalId, token) : listPageComments(postExternalId, token),
-
-  reply: (platform: MetaPlatform, commentExternalId: string, message: string, token: string) =>
+  listComments: (platform: MetaPlatform, postExternalId: string, token: string, api?: MetaApi) =>
     platform === 'instagram'
-      ? replyToInstagramComment(commentExternalId, message, token)
+      ? listInstagramComments(postExternalId, token, 50, api)
+      : listPageComments(postExternalId, token),
+
+  reply: (platform: MetaPlatform, commentExternalId: string, message: string, token: string, api?: MetaApi) =>
+    platform === 'instagram'
+      ? replyToInstagramComment(commentExternalId, message, token, api)
       : replyToPageComment(commentExternalId, message, token),
 
-  hide: (platform: MetaPlatform, commentExternalId: string, hide: boolean, token: string) =>
+  hide: (platform: MetaPlatform, commentExternalId: string, hide: boolean, token: string, api?: MetaApi) =>
     platform === 'instagram'
-      ? hideInstagramComment(commentExternalId, hide, token)
+      ? hideInstagramComment(commentExternalId, hide, token, api)
       : hidePageComment(commentExternalId, hide, token)
 };

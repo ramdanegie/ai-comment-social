@@ -179,7 +179,7 @@
       <div class="relative mt-8 h-96 w-full max-w-xl">
         <!-- Connecting Circuit / Flow Lines (SVG Backing) -->
         <svg class="absolute inset-0 h-full w-full pointer-events-none opacity-40 dark:opacity-30" viewBox="0 0 500 380">
-          <path d="M 120 70 C 220 70, 260 160, 360 160" fill="none" stroke="#6366f1" stroke-width="2" stroke-dasharray="6,6" class="animate-pulse" />
+          <path d="M 120 70 C 220 70, 260 160, 360 160" fill="none" stroke="#ea4335" stroke-width="2" stroke-dasharray="6,6" class="animate-pulse" />
           <path d="M 360 160 C 420 160, 420 280, 220 310" fill="none" stroke="#4285F4" stroke-width="2" stroke-dasharray="6,6" />
           <path d="M 80 260 C 140 260, 180 180, 360 160" fill="none" stroke="#34A853" stroke-width="1.5" stroke-dasharray="4,4" />
         </svg>
@@ -188,7 +188,7 @@
         <div class="absolute left-0 top-2 w-72 sm:w-80 rounded-2xl border border-slate-200/90 bg-white/95 p-3.5 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 animate-float-slow">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white shadow-xs">
+              <div class="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 via-rose-500 to-[#ea4335] text-white shadow-xs">
                 <InstagramIcon class="h-4 w-4" />
               </div>
               <div>
