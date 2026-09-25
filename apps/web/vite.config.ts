@@ -4,6 +4,8 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+	// Allow HTTPS tunnels (ngrok) so Instagram Login can redirect back to the local dev server.
+	server: { allowedHosts: ['.ngrok-free.app', '.ngrok.app'] },
 	plugins: [
 		tailwindcss(),
 		sveltekit({
