@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { Elysia, t } from 'elysia';
 import { node } from '@elysiajs/node';
 import { cors } from '@elysiajs/cors';
@@ -1160,38 +1161,57 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
   })
 
   // 10. Webhooks (Meta & Midtrans)
-  .get('/webhooks/meta', ({ query }) => {
-    // Hub challenge verification
-    const mode = query['hub.mode'];
-    const token = query['hub.verify_token'];
-    const challenge = query['hub.challenge'];
-
-    if (mode === 'subscribe' && token === (process.env.META_WEBHOOK_VERIFY_TOKEN || 'replyra_verify_token_2026')) {
-      return challenge;
+  // Subscription handshake: echo hub.challenge only for our own verify token (no default value).
+  .get('/webhooks/meta', ({ query, set }) => {
+    const expected = process.env.META_WEBHOOK_VERIFY_TOKEN;
+    const token = String(query['hub.verify_token'] ?? '');
+    const ok =
+      !!expected &&
+      query['hub.mode'] === 'subscribe' &&
+      token.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+    if (!ok) {
+      set.status = 403;
+      return 'Forbidden';
     }
-    return 'Invalid verify token';
+    return String(query['hub.challenge'] ?? '');
   })
 
-  .post('/webhooks/meta', async ({ body, headers, set }) => {
-    // 1. Signature check
-    const sig = headers['x-hub-signature-256'];
-    const appSecret = process.env.META_APP_SECRET || '';
-    if (appSecret && !verifyMetaSignature(JSON.stringify(body), sig, appSecret)) {
-      set.status = 401;
-      return { error: 'Invalid webhook signature' };
-    }
+  .post(
+    '/webhooks/meta',
+    async ({ body, headers, set }) => {
+      // 1. Signature over the raw body (fails closed — see verifyMetaSignature).
+      const secrets = [process.env.META_APP_SECRET, process.env.META_IG_APP_SECRET].filter((s): s is string => !!s);
+      if (!secrets.length) {
+        set.status = 503;
+        return { error: 'Webhooks not configured' };
+      }
+      const raw = typeof body === 'string' ? body : '';
+      if (!verifyMetaSignature(raw, headers['x-hub-signature-256'], secrets)) {
+        set.status = 401;
+        return { error: 'Invalid webhook signature' };
+      }
 
-    // 2. Fast ACK < 1s: insert job into DB
-    const dedupeKey = `meta_${Date.now()}_${Math.random()}`;
-    await db.insert(schema.jobs).values({
-      type: 'classify_comment',
-      payload: body,
-      status: 'pending',
-      dedupeKey
-    });
+      let payload: unknown;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        set.status = 400;
+        return { error: 'Invalid JSON' };
+      }
 
-    return { status: 'received' };
-  })
+      // 2. Fast ACK < 1s: the worker ingests it (ingestWebhookPayload).
+      await db.insert(schema.jobs).values({
+        type: 'classify_comment',
+        payload,
+        status: 'pending',
+        dedupeKey: `meta_${Date.now()}_${crypto.randomUUID()}`
+      });
+      return { status: 'received' };
+    },
+    // Keep the exact bytes Meta signed — re-serialising parsed JSON changes them.
+    { parse: 'text' }
+  )
 
   // Midtrans HTTP notification: verify signature, then trust only the Get Status API (idempotent).
   .post('/webhooks/midtrans', async ({ body, set }) => {

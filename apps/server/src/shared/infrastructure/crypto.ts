@@ -31,10 +31,19 @@ export function decryptToken(encryptedPayload: string): string {
   }
 }
 
-export function verifyMetaSignature(payload: string, signatureHeader: string | undefined, appSecret: string): boolean {
-  if (!signatureHeader || !appSecret) return true; // dev bypass if not configured
-  const expectedSig = 'sha256=' + crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(signatureHeader), Buffer.from(expectedSig));
+/**
+ * Meta webhook signature (X-Hub-Signature-256) over the exact raw request body.
+ * Fails closed: no header, malformed header, or no configured secret → false.
+ * Several secrets are accepted because Facebook (Page) and Instagram Login webhooks are signed
+ * with different app secrets.
+ */
+export function verifyMetaSignature(rawBody: string, signatureHeader: string | undefined | null, appSecrets: string[]): boolean {
+  const match = /^sha256=([0-9a-f]{64})$/i.exec(signatureHeader?.trim() ?? '');
+  if (!match) return false;
+  const received = Buffer.from(match[1].toLowerCase(), 'hex');
+  return appSecrets
+    .filter(Boolean)
+    .some((secret) => crypto.timingSafeEqual(received, crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest()));
 }
 
 export function verifyMidtransSignature(

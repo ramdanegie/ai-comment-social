@@ -1,3 +1,5 @@
+import nodeCrypto from 'node:crypto';
+import { verifyMetaSignature } from './shared/infrastructure/crypto';
 import { describe, expect, test } from 'bun:test';
 import { RulePrefilter } from './contexts/moderation/domain/RulePrefilter';
 import { LlmClassifier } from './contexts/moderation/domain/LlmClassifier';
@@ -124,6 +126,18 @@ describe('Replyra Domain Invariants (PRD §4.3 & §18.1)', () => {
     const invented = ReplyPolicyEvaluator.postCheckReply('Bisa kak, cuma Rp 900.000 aja!', bv);
     expect(invented.passed).toBe(false);
     expect(invented.violations[0]).toContain('tidak ada di Info Bisnis');
+  });
+
+  test('Webhook Meta: signature wajib valid atas raw body (fail closed)', () => {
+    const raw = '{"object":"instagram","entry":[{"id":"1","changes":[{"field":"comments","value":{"text":"Mantap \\u00e9 🔥"}}]}]}';
+    const sign = (secret: string) => 'sha256=' + nodeCrypto.createHmac('sha256', secret).update(raw).digest('hex');
+    expect(verifyMetaSignature(raw, sign('fb-secret'), ['fb-secret', 'ig-secret'])).toBe(true);
+    expect(verifyMetaSignature(raw, sign('ig-secret'), ['fb-secret', 'ig-secret'])).toBe(true);
+    expect(verifyMetaSignature(raw, undefined, ['fb-secret'])).toBe(false);
+    expect(verifyMetaSignature(raw, 'sha256=abc', ['fb-secret'])).toBe(false);
+    expect(verifyMetaSignature(raw, sign('other'), ['fb-secret'])).toBe(false);
+    expect(verifyMetaSignature(raw, sign('fb-secret'), [])).toBe(false);
+    expect(verifyMetaSignature(JSON.stringify(JSON.parse(raw)), sign('fb-secret'), ['fb-secret'])).toBe(false);
   });
 
   test('Invariant 7: Rule prefilter mendeteksi ancaman dan judi online', async () => {
