@@ -51,6 +51,30 @@
     refreshReviewCount();
   });
 
+  function menuFocus(node: HTMLElement) {
+    const previous = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    node.focus();
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') isMobileMenuOpen = false;
+      if (event.key !== 'Tab') return;
+      const items = Array.from(node.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), select'));
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === node)) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === node)) {
+        event.preventDefault(); first?.focus();
+      }
+    }
+    node.addEventListener('keydown', onKey);
+    return { destroy() {
+      document.body.style.overflow = previousOverflow;
+      node.removeEventListener('keydown', onKey);
+      previous?.focus();
+    } };
+  }
+
   const navigate = (id: string) => goto(pathFor(id));
 
   function handleLogoutSuccess() {
@@ -68,7 +92,8 @@
   <title>{PAGES[activePage][session.isLangEn ? 'labelEn' : 'labelId']} · Replyra</title>
 </svelte:head>
 
-<div class="flex min-h-screen flex-col bg-[#f8fafc] text-slate-800 dark:bg-[#0b0f17] dark:text-slate-100">
+<div class="app-shell flex min-h-dvh flex-col text-slate-800 dark:text-slate-100">
+  <a href="#main-content" class="skip-link">{session.isLangEn ? 'Skip to content' : 'Langsung ke konten'}</a>
   <Navbar
     bind:activeWorkspace={session.workspace}
     bind:currentRole={session.role}
@@ -81,7 +106,7 @@
     onLogout={() => (isLogoutModalOpen = true)}
   />
 
-  <div class="flex flex-1">
+  <div class="flex flex-1 items-start">
     <Sidebar
       {activePage}
       pendingReviewCount={session.pendingReviewCount}
@@ -91,7 +116,7 @@
       onLogout={() => (isLogoutModalOpen = true)}
     />
 
-    <main class="flex-1 overflow-x-hidden p-4 pb-24 sm:p-6 sm:pb-28 lg:p-8 lg:pb-12">
+    <main id="main-content" tabindex="-1" class="app-content min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
       <div class="mx-auto max-w-7xl">
         {@render children()}
       </div>
@@ -107,8 +132,8 @@
 
   <!-- Mobile drawer -->
   {#if isMobileMenuOpen}
-    <div class="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-xs lg:hidden">
-      <div class="flex w-72 flex-col justify-between border-r border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+    <div class="mobile-menu-overlay fixed inset-0 z-50 flex lg:hidden">
+      <div use:menuFocus role="dialog" aria-modal="true" aria-label={session.isLangEn ? 'Navigation' : 'Navigasi'} tabindex="-1" class="mobile-menu-sheet glass-panel flex flex-col justify-between p-5">
         <div class="space-y-4">
           <div class="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
             <div class="flex items-center gap-2.5">
@@ -179,7 +204,7 @@
       <button
         type="button"
         aria-label={session.isLangEn ? 'Close menu' : 'Tutup menu'}
-        class="flex-1 cursor-default border-none bg-transparent"
+        class="menu-backdrop absolute inset-0 -z-10 cursor-default border-none bg-transparent"
         onclick={() => (isMobileMenuOpen = false)}
       ></button>
     </div>

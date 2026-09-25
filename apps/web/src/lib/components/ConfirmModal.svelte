@@ -47,7 +47,7 @@
 
 {#if isOpen}
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-md transition-opacity duration-200"
     role="dialog"
     aria-modal="true"
     aria-labelledby="confirm-modal-title"
@@ -60,11 +60,11 @@
     ></button>
 
     <div
-      class="relative z-10 w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900"
+      class="glass-panel relative z-10 w-full max-w-md p-6 sm:p-7 transition-all"
     >
       <button
         type="button"
-        class="absolute right-4 top-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+        class="absolute right-4.5 top-4.5 rounded-full p-2 text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         onclick={closeModal}
         aria-label="Tutup"
       >
@@ -74,8 +74,8 @@
       <div class="flex items-start gap-4">
         <div
           class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl {isDanger
-            ? 'bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 border border-rose-500/20'
-            : 'bg-[#1a73e8]/10 text-[#1a73e8] dark:bg-[#1a73e8]/20 border border-[#1a73e8]/20'}"
+            ? 'bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 border border-rose-500/25 shadow-xs'
+            : 'bg-brand-500/10 text-brand-500 dark:bg-brand-500/20 border border-brand-500/25 shadow-xs'}"
         >
           <AlertTriangle class="h-6 w-6" />
         </div>
@@ -94,7 +94,7 @@
           type="button"
           onclick={closeModal}
           disabled={isSubmitting}
-          class="rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-750 transition-colors disabled:opacity-50"
+          class="glass-pill px-4.5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 disabled:opacity-50"
         >
           {cancelText}
         </button>
@@ -102,9 +102,9 @@
           type="button"
           onclick={handleConfirm}
           disabled={isSubmitting}
-          class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition-all disabled:opacity-50 active:scale-98 {isDanger
-            ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20'
-            : 'bg-[#1a73e8] hover:bg-[#1557b0] shadow-[#1a73e8]/20'}"
+          class="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-semibold text-white shadow-md transition-all disabled:opacity-50 active:scale-95 {isDanger
+            ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/30'
+            : 'btn-primary-glass'}"
         >
           {#if isSubmitting}
             <Loader2 class="h-3.5 w-3.5 animate-spin" />

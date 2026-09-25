@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "Replyra — AI Comment Moderation",
+  "short_name": "Replyra",
+  "description": "Kelola komentar dan balasan AI dalam satu workspace.",
+  "lang": "id",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eaf0f7",
+  "theme_color": "#eaf0f7",
+  "icons": [
+    { "src": "/replyra-icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

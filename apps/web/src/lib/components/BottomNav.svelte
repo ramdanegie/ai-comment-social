@@ -30,14 +30,14 @@
   ];
 </script>
 
-<nav class="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-slate-200 bg-white/95 px-2 backdrop-blur-md pb-safe dark:border-slate-800 dark:bg-slate-900/95 lg:hidden">
+<nav aria-label={isLangEn ? 'Main navigation' : 'Navigasi utama'} class="bottom-dock glass-chrome fixed z-40 flex items-center lg:hidden">
   {#each bottomItems as item}
     {@const isActive = activePage === item.id}
     {@const Icon = item.icon}
     <a
       href={pathFor(item.id)}
       aria-current={isActive ? 'page' : undefined}
-      class="relative flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors {isActive
+      class="dock-item relative flex min-w-0 flex-1 flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors {isActive
         ? 'text-brand-500 dark:text-brand-400 font-semibold'
         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}"
       onclick={() => onSelectPage(item.id)}
@@ -56,7 +56,9 @@
 
   <button
     type="button"
-    class="flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+    class="dock-item flex min-w-0 flex-1 flex-col items-center justify-center py-1 text-[11px] font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+    aria-haspopup="dialog"
+    data-active={!bottomItems.some(item => item.id === activePage)}
     onclick={onOpenMoreMenu}
   >
     <MoreHorizontal class="h-5 w-5" />

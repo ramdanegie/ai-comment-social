@@ -85,14 +85,14 @@
 </script>
 
 <aside
-  class="sticky top-16 hidden h-[calc(100vh-4rem)] shrink-0 flex-col justify-between border-r border-slate-200/60 bg-white/80 backdrop-blur-xl transition-all duration-300 ease-in-out dark:border-slate-800/60 dark:bg-[#0b0f17]/85 lg:flex {isCollapsed ? 'w-20 p-2.5' : 'w-64 p-3.5'}"
+  class="app-sidebar glass-chrome sticky self-start hidden shrink-0 flex-col justify-between transition-[width] duration-300 lg:flex {isCollapsed ? 'w-20 p-2.5' : 'w-60 p-3.5'}"
   aria-label="Sidebar Navigasi"
 >
   <!-- Top: Brand Header & Navigation -->
   <div class="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden pr-0.5">
     {#if !isCollapsed}
       <!-- Expanded Brand Header Card -->
-      <div class="mb-4 rounded-xl border border-slate-200/60 bg-slate-50/60 p-2.5 dark:border-slate-800/70 dark:bg-slate-900/50 transition-all shadow-2xs">
+      <div class="mb-4 rounded-2xl border border-white/60 bg-white/40 p-2.5 dark:border-white/10 dark:bg-white/5 backdrop-blur-sm transition-all shadow-2xs">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700">
@@ -105,7 +105,7 @@
             <div class="min-w-0 flex-1">
               <h2 class="truncate text-xs font-bold text-slate-900 dark:text-white">MauJahit.id</h2>
               <div class="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                 <span>{isLangEn ? 'Assisted' : 'Mode Terpandu'}</span>
               </div>
             </div>
@@ -151,7 +151,8 @@
     {/if}
 
     <!-- Navigation List -->
-    <nav class="space-y-1">
+    {#if !isCollapsed}<p class="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Workspace</p>{/if}
+    <nav class="space-y-1.5">
       {#each navItems as item}
         {@const isActive = activePage === item.id}
         {@const Icon = item.icon}
@@ -213,7 +214,7 @@
       <!-- Expanded: AI Units Mini Progress Card -->
       <a
         href={pathFor('billing')}
-        class="w-full text-left rounded-xl border border-slate-200/70 bg-slate-50/70 p-2.5 transition hover:border-slate-300 dark:border-slate-800/70 dark:bg-slate-900/60 dark:hover:border-slate-700"
+        class="block w-full text-left rounded-2xl border border-white/60 bg-white/40 p-2.5 backdrop-blur-sm transition hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
         onclick={() => onSelectPage('billing')}
         title="Lihat detail penggunaan kuota"
       >

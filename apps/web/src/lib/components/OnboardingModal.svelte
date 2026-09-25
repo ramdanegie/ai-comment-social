@@ -54,8 +54,8 @@
 </script>
 
 {#if isOpen}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-    <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-md">
+    <div class="glass-panel w-full max-w-lg p-6 sm:p-7">
       <!-- Top Wizard Header -->
       <div class="flex items-center justify-between border-b pb-4 border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2">
@@ -186,11 +186,11 @@
       </div>
 
       <!-- Bottom Wizard Buttons -->
-      <div class="mt-6 flex items-center justify-between border-t pt-4 border-slate-100 dark:border-slate-800">
+      <div class="mt-6 flex items-center justify-between border-t pt-4 border-slate-100/60 dark:border-slate-800/60">
         {#if currentStep > 1}
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+            class="glass-pill inline-flex items-center gap-1.5 px-4.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
             onclick={handleBack}
           >
             <ArrowLeft class="h-3.5 w-3.5" />
@@ -202,7 +202,7 @@
 
         <button
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-xl bg-brand-500 px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 active:scale-95 transition"
+          class="btn-primary-glass inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-semibold text-white shadow-md active:scale-95 transition"
           onclick={handleNext}
         >
           <span>{currentStep === 4 ? 'Selesaikan & Mulai' : 'Lanjutkan'}</span>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ShieldAlert, ArrowRight, Clock, CheckCircle2, AlertTriangle } from 'lucide-svelte';
+  import { ShieldAlert, ArrowRight, Clock, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-svelte';
   import InstagramIcon from './icons/InstagramIcon.svelte';
   import FacebookIcon from './icons/FacebookIcon.svelte';
   import TiktokIcon from './icons/TiktokIcon.svelte';
@@ -87,11 +87,15 @@
 
 <div class="space-y-6">
   <!-- Header -->
-  <div>
+  <div class="dashboard-intro">
+    <div>
+      <p class="dashboard-eyebrow"><Sparkles class="h-3.5 w-3.5" />{isLangEn ? 'Your workspace, at a glance' : 'Sekilas workspace Anda'}</p>
     <h1 class="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Dashboard</h1>
     <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
       {isLangEn ? 'Comment sentiment and AI reply activity' : 'Sentimen komentar dan aktivitas balasan AI'}
     </p>
+    </div>
+    <div class="dashboard-date glass-chrome">{new Date().toLocaleDateString(isLangEn ? 'en-GB' : 'id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
   </div>
 
   {#if loading || !summary}
@@ -107,9 +111,9 @@
       <button
         type="button"
         onclick={() => onSelectPage('review')}
-        class="group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition {summary.risk > 0
-          ? 'border-rose-200 bg-rose-50 hover:bg-rose-100/70 dark:border-rose-900/60 dark:bg-rose-950/30'
-          : 'border-amber-200 bg-amber-50 hover:bg-amber-100/70 dark:border-amber-900/60 dark:bg-amber-950/30'}"
+        class="group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition backdrop-blur-sm {summary.risk > 0
+          ? 'border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/15'
+          : 'border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15'}"
       >
         <span
           class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl {summary.risk > 0
@@ -129,7 +133,7 @@
             </span>
           {/if}
         </span>
-        <span class="flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span class="hidden shrink-0 items-center gap-1 text-sm font-medium sm:flex text-slate-700 dark:text-slate-200">
           {isLangEn ? 'Open queue' : 'Buka antrean'}
           <ArrowRight class="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </span>
@@ -138,7 +142,7 @@
 
     <!-- KPIs -->
     <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      <div class="soft-card col-span-2 p-4 sm:col-span-1">
+      <div class="soft-card dashboard-total col-span-2 p-4 sm:col-span-1">
         <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{isLangEn ? 'Total comments' : 'Total komentar'}</p>
         <p class="mt-2 text-3xl font-semibold tabular-nums tracking-tight text-slate-900 dark:text-white">
           {formatNumber(summary.total)}
@@ -198,7 +202,7 @@
                   {@const h = (n: number) => `${(n / chartMax) * 100}%`}
                   <button
                     type="button"
-                    class="group relative flex h-full flex-1 cursor-default flex-col justify-end rounded outline-none"
+                    class="chart-column group relative flex h-full flex-1 cursor-default flex-col justify-end rounded outline-none"
                     aria-label="{dayLabel(t.day)}: {t.total} komentar, {t.positive} positif, {t.neutral} netral, {t.negative} negatif, {t.risk} berisiko"
                     onmouseenter={() => (hoveredDay = t.day)}
                     onmouseleave={() => (hoveredDay = null)}
@@ -256,7 +260,7 @@
           </div>
         </dl>
 
-        <div class="mt-auto rounded-xl bg-slate-50 p-4 pt-4 dark:bg-slate-800/50">
+        <div class="mt-auto rounded-2xl bg-white/40 p-4 border border-white/60 dark:bg-white/5 dark:border-white/10 backdrop-blur-xs">
           <p class="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
             <Clock class="h-3.5 w-3.5" />
             {isLangEn ? 'Median response time' : 'Median waktu respons'}

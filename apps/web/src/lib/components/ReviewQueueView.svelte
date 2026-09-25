@@ -244,8 +244,8 @@
       <div class="hidden h-96 animate-pulse rounded-2xl bg-slate-200/70 dark:bg-slate-800 lg:block"></div>
     </div>
   {:else if queue.length === 0}
-    <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-16 text-center dark:border-slate-800 dark:bg-slate-900">
-      <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
+    <div class="soft-card flex flex-col items-center justify-center px-4 py-16 text-center">
+      <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/25">
         <CheckCircle class="h-6 w-6" />
       </div>
       <h3 class="mt-4 text-base font-semibold text-slate-900 dark:text-white">
@@ -426,7 +426,7 @@
           </div>
 
           <!-- Actions -->
-          <div class="sticky bottom-[4.5rem] flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/95 px-5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 lg:static lg:bg-slate-50/60 lg:backdrop-blur-none">
+          <div class="review-actions sticky bottom-[calc(6rem+env(safe-area-inset-bottom))] flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/95 px-5 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95 sm:px-6 lg:static lg:bg-slate-50/60 lg:backdrop-blur-none">
             <button
               type="button"
               onclick={handleDismiss}

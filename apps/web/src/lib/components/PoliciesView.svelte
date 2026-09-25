@@ -321,10 +321,10 @@
 
           <!-- Daily Quota -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label for="daily-limit" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
               Batas Auto-Reply / Hari:
             </label>
-            <input
+            <input id="daily-limit"
               type="number"
               bind:value={policy.dailyAutoReplyLimit}
               class="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50/50 p-2 text-xs font-mono font-bold dark:border-slate-700 dark:bg-slate-800"
@@ -334,7 +334,7 @@
 
           <!-- Auto-hide spam toggle -->
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label for="autohide" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
               Auto-Hide Spam:
             </label>
             <div class="mt-2 flex items-center gap-2">
@@ -360,8 +360,8 @@
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Brand / Toko:</label>
-            <input
+            <label for="brand-name" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Brand / Toko:</label>
+            <input id="brand-name"
               type="text"
               bind:value={policy.brandVoice.brandName}
               class="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs dark:border-slate-700 dark:bg-slate-800"
@@ -369,8 +369,8 @@
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Tone / Gaya Bahasa:</label>
-            <input
+            <label for="brand-tone" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Tone / Gaya Bahasa:</label>
+            <input id="brand-tone"
               type="text"
               bind:value={policy.brandVoice.tone}
               class="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs dark:border-slate-700 dark:bg-slate-800"
@@ -379,8 +379,8 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Default Call-To-Action (CTA):</label>
-          <input
+          <label for="brand-cta" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Default Call-To-Action (CTA):</label>
+          <input id="brand-cta"
             type="text"
             bind:value={policy.brandVoice.cta}
             class="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs dark:border-slate-700 dark:bg-slate-800"
@@ -389,14 +389,14 @@
 
         <!-- Forbidden phrases editor -->
         <div>
-          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+          <label for="forbidden-phrase" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
             Daftar Frasa Terlarang (Post-Check Rule):
           </label>
           <div class="mt-2 flex flex-wrap gap-1.5">
             {#each policy.brandVoice.forbiddenPhrases as phrase}
               <span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-1 text-[11px] font-medium text-rose-700 border border-rose-500/20 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30">
                 <span>"{phrase}"</span>
-                <button type="button" onclick={() => removeForbiddenPhrase(phrase)} class="hover:text-rose-700 transition-colors">
+                <button type="button" aria-label={`Hapus frasa ${phrase}`} onclick={() => removeForbiddenPhrase(phrase)} class="hover:text-rose-700 transition-colors">
                   <X class="h-3 w-3" />
                 </button>
               </span>
@@ -404,7 +404,7 @@
           </div>
 
           <div class="mt-2 flex gap-2">
-            <input
+            <input id="forbidden-phrase"
               type="text"
               placeholder="Tambah frasa terlarang..."
               bind:value={newForbiddenPhrase}

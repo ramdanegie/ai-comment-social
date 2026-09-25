@@ -192,7 +192,7 @@
     </div>
   {:else if comments.length === 0}
     <!-- Empty State -->
-    <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center dark:border-slate-800 dark:bg-slate-900">
+    <div class="soft-card flex flex-col items-center justify-center py-16 text-center">
       <Filter class="h-8 w-8 text-slate-300 dark:text-slate-600" />
       <p class="mt-2 text-sm font-semibold text-slate-900 dark:text-white">Tidak ada komentar yang cocok</p>
       <p class="text-xs text-slate-500">Coba ubah kata kunci pencarian atau reset filter.</p>
@@ -349,16 +349,16 @@
 
 <!-- Comment Detail Modal / Drawer -->
 {#if activeDetailComment}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-    <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-md">
+    <div class="glass-panel w-full max-w-lg p-6 sm:p-7 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100/60 dark:border-slate-800/60">
         <h3 class="text-base font-bold text-slate-900 dark:text-white">Detail Komentar & Audit</h3>
         <button
           type="button"
-          class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          class="rounded-full p-2 text-slate-400 hover:bg-black/5 dark:hover:bg-white/10"
           onclick={() => (activeDetailComment = null)}
         >
-          <X class="h-5 w-5" />
+          <X class="h-4.5 w-4.5" />
         </button>
       </div>
 
@@ -370,7 +370,7 @@
 
         <div>
           <span class="text-slate-400">Teks Komentar:</span>
-          <p class="mt-1 rounded-xl bg-slate-50 p-3 font-medium text-slate-900 dark:bg-slate-800 dark:text-slate-100">
+          <p class="mt-1 rounded-2xl bg-white/40 p-3.5 font-medium text-slate-900 dark:bg-white/5 dark:text-slate-100 border border-white/60 dark:border-white/10 backdrop-blur-xs">
             "{activeDetailComment.text}"
           </p>
         </div>
@@ -405,7 +405,7 @@
         {#if activeDetailComment.reply?.finalText}
           <div>
             <span class="text-slate-400">Balasan Terkirim:</span>
-            <p class="mt-1 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+            <p class="mt-1 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-emerald-900 dark:text-emerald-200">
               {activeDetailComment.reply.finalText}
             </p>
             <span class="mt-1 block text-[10px] text-slate-400 font-mono">
@@ -418,7 +418,7 @@
       <div class="mt-6 flex justify-end">
         <button
           type="button"
-          class="rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+          class="glass-pill px-5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
           onclick={() => (activeDetailComment = null)}
         >
           Tutup
@@ -430,8 +430,8 @@
 
 <!-- Label Correction Modal (F13) -->
 {#if correctingComment}
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-md">
+    <div class="glass-panel w-full max-w-md p-6 sm:p-7 shadow-2xl">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h3 class="text-base font-bold text-slate-900 dark:text-white">Koreksi Label Komentar</h3>
@@ -481,17 +481,17 @@
         </div>
       </div>
 
-      <div class="mt-6 flex justify-end gap-2">
+      <div class="mt-6 flex justify-end gap-2.5">
         <button
           type="button"
-          class="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300"
+          class="glass-pill px-4.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200"
           onclick={() => (correctingComment = null)}
         >
           Batal
         </button>
         <button
           type="button"
-          class="rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-brand-600 transition active:scale-98 disabled:opacity-50"
+          class="btn-primary-glass inline-flex items-center rounded-full px-5 py-2 text-xs font-semibold text-white shadow-md active:scale-95 disabled:opacity-50"
           onclick={saveLabelCorrection}
           disabled={isSavingLabel}
         >

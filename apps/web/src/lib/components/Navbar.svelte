@@ -64,12 +64,12 @@
   }
 </script>
 
-<header class="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200/60 bg-white/80 px-4 backdrop-blur-xl transition-colors duration-200 dark:border-slate-800/60 dark:bg-[#0b0f17]/80 sm:px-6">
+<header class="app-navbar glass-chrome sticky top-0 z-40 flex w-full items-center justify-between gap-3 px-4 sm:px-6">
   <!-- Left: Brand & Mobile Menu Button -->
   <div class="flex items-center gap-3">
     <button
       type="button"
-      class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/70 text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 lg:hidden shadow-xs"
+      class="glass-pill inline-flex h-10 w-10 items-center justify-center text-slate-700 dark:text-slate-200 lg:hidden shadow-xs"
       onclick={onToggleMobileMenu}
       aria-label="Buka menu navigasi"
     >
@@ -77,7 +77,7 @@
     </button>
 
     <div class="flex items-center gap-2.5">
-      <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
+      <div class="flex h-10 w-10 items-center justify-center brand-mark rounded-2xl text-white shadow-xs">
         <MessageSquareQuote class="h-4.5 w-4.5" />
       </div>
       <div>
@@ -95,8 +95,9 @@
       <span class="text-slate-300 dark:text-slate-700">/</span>
       <div class="relative">
         <select
+          aria-label={isLangEn ? 'Workspace' : 'Workspace aktif'}
           bind:value={activeWorkspace}
-          class="h-8 appearance-none rounded-xl border border-slate-200/70 bg-slate-50/70 pl-2.5 pr-7 text-xs font-semibold text-slate-700 transition hover:border-slate-300 focus:border-brand-500 focus:outline-none dark:border-slate-800/80 dark:bg-slate-900/60 dark:text-slate-200 shadow-xs"
+          class="h-8 appearance-none rounded-full border border-white/60 bg-white/50 pl-3 pr-7 text-xs font-semibold text-slate-700 transition hover:bg-white/80 focus:border-brand-500 focus:outline-none dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-200 shadow-2xs backdrop-blur-xs"
         >
           {#each workspaces as ws}
             <option value={ws.slug} class="dark:bg-slate-900">{ws.name}</option>
@@ -112,7 +113,7 @@
     <!-- Setup Brand Button -->
     <button
       type="button"
-      class="hidden items-center gap-1.5 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-98 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-slate-800 md:inline-flex"
+      class="glass-pill hidden items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 md:inline-flex shadow-xs"
       onclick={onOpenOnboarding}
     >
       <Plus class="h-3.5 w-3.5" />
@@ -137,7 +138,7 @@
     <!-- Review Alert Badge Icon -->
     <button
       type="button"
-      class="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 shadow-xs active:scale-95"
+      class="glass-pill relative inline-flex h-10 w-10 items-center justify-center text-slate-700 dark:text-slate-200 shadow-xs"
       onclick={() => onSelectPage('review')}
       title="{pendingReviewCount} komentar perlu review"
       aria-label="{pendingReviewCount} komentar perlu review"
@@ -153,7 +154,7 @@
     <!-- Language Toggle -->
     <button
       type="button"
-      class="hidden h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-xs font-bold sm:inline-flex text-slate-700 transition-all hover:bg-slate-100 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800 shadow-xs active:scale-95"
+      class="glass-pill inline-flex h-10 w-10 items-center justify-center text-xs font-bold text-slate-700 dark:text-slate-200 shadow-xs"
       onclick={toggleLang}
       title="Ubah bahasa (ID / EN)"
       aria-label="Ubah bahasa"
@@ -164,7 +165,7 @@
     <!-- Dark Mode Toggle -->
     <button
       type="button"
-      class="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800 shadow-xs active:scale-95"
+      class="glass-pill inline-flex h-10 w-10 items-center justify-center text-slate-700 dark:text-slate-200 shadow-xs"
       onclick={toggleDark}
       aria-label="Toggle tema gelap atau terang"
     >

@@ -4,9 +4,16 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<title>Replyra — AI Comment Moderation & Auto-Reply</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <meta name="theme-color" content="#eaf0f7" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#101a2b" media="(prefers-color-scheme: dark)" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Replyra" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/replyra-icon-1024.png" />
 		<script>
 			try {
 				const t = localStorage.getItem('replyra_theme');
@@ -19,7 +26,7 @@
 		</script>
 		%sveltekit.head%
 	</head>
-	<body class="bg-[#f8fafc] text-slate-800 dark:bg-[#0b0f17] dark:text-slate-100 antialiased selection:bg-[#ea4335] selection:text-white" data-sveltekit-preload-data="hover">
+	<body class="bg-[#f8fafc] text-slate-800 dark:bg-[#0b0f17] dark:text-slate-100 antialiased selection:bg-brand-500 selection:text-white" data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

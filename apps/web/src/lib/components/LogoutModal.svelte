@@ -80,12 +80,12 @@
 
     <!-- Modal Content Card -->
     <div
-      class="relative z-10 w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900"
+      class="glass-panel relative z-10 w-full max-w-md p-6 sm:p-7 transition-all"
     >
       <!-- Top Close Button -->
       <button
         type="button"
-        class="absolute right-4 top-4 rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+        class="absolute right-4.5 top-4.5 rounded-full p-2 text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
         onclick={closeModal}
         aria-label="Tutup"
       >
@@ -94,7 +94,7 @@
 
       <!-- Icon & Headline -->
       <div class="flex items-start gap-4">
-        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 dark:text-rose-500 border border-rose-500/20">
+        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/25 shadow-xs">
           <LogOut class="h-6 w-6" />
         </div>
         <div class="min-w-0 flex-1 pr-6">
@@ -110,9 +110,9 @@
       </div>
 
       <!-- User Account Info Preview Pill (Dynamic from Database) -->
-      <div class="mt-4 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800/80 dark:bg-slate-850/60">
+      <div class="mt-4 flex items-center justify-between rounded-2xl border border-white/60 bg-white/40 p-3 dark:border-white/10 dark:bg-white/5 backdrop-blur-sm">
         <div class="flex items-center gap-2.5 min-w-0">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white dark:bg-white dark:text-slate-900">
+          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white dark:bg-white dark:text-slate-900 shadow-2xs">
             {userInitials}
           </div>
           <div class="min-w-0">
@@ -120,7 +120,7 @@
             <p class="truncate text-[10px] text-slate-400 font-mono">{userEmail}</p>
           </div>
         </div>
-        <span class="rounded-md border border-slate-200/80 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+        <span class="rounded-full border border-white/60 bg-white/60 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/10 dark:text-slate-300">
           {roleLabel}
         </span>
       </div>
@@ -129,7 +129,7 @@
       <div class="mt-6 flex items-center justify-end gap-2.5">
         <button
           type="button"
-          class="rounded-xl border border-slate-200/80 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 active:scale-95"
+          class="glass-pill px-4.5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200"
           onclick={closeModal}
           disabled={isLoggingOut}
         >
@@ -138,7 +138,7 @@
 
         <button
           type="button"
-          class="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-500 px-5 py-2.5 text-xs font-bold text-white shadow-sm shadow-rose-500/30 transition hover:bg-rose-600 active:scale-98 disabled:opacity-60"
+          class="inline-flex items-center justify-center gap-2 rounded-full bg-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-rose-600/30 transition hover:bg-rose-700 active:scale-95 disabled:opacity-60"
           onclick={handleConfirmLogout}
           disabled={isLoggingOut}
         >
