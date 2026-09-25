@@ -26,6 +26,8 @@ import { RegistrationError, ensureTenantWorkspace, registerTenant } from './cont
 import { adminRoutes } from './contexts/billing/presentation/adminRoutes';
 import { auth } from './shared/infrastructure/auth';
 import { authGuard } from './shared/http/authGuard';
+import { dailyTrend, medianResponseSec, topPosts } from './contexts/insights/application/Metrics';
+import { buildFacebookAuthUrl, connectFacebookPages, exchangeFacebookCode } from './contexts/channel/application/ConnectFacebook';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3099;
 
@@ -46,6 +48,18 @@ function allowSignup(ip: string) {
 }
 
 const WEB_URL = (process.env.WEB_URL || WEB_ORIGINS[0] || 'http://localhost:5173').replace(/\/$/, '');
+
+/** Plan limit on connected social accounts; returns an error message when `adding` would exceed it. */
+async function accountLimitError(workspaceId: string, adding: number) {
+  const billing = await getBillingStatus(workspaceId);
+  if (!billing?.plan) return null;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(schema.socialAccounts)
+    .where(eq(schema.socialAccounts.workspaceId, workspaceId));
+  if ((row?.n ?? 0) + adding <= billing.plan.maxSocialAccounts) return null;
+  return `Paket ${billing.plan.name} maksimal ${billing.plan.maxSocialAccounts} akun. Upgrade paket untuk menambah akun.`;
+}
 
 // Bun locally/VPS; Node on cPanel shared hosting (Passenger) — see src/node/*.
 export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } : {})
@@ -327,17 +341,10 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
 
         const { token, expiresAt } = await exchangeInstagramCode(body.code);
 
-        // Plan limit on connected accounts (counts every account already in the workspace).
-        const billing = await getBillingStatus(ws.id);
-        if (billing?.plan) {
-          const existing = await db
-            .select({ id: schema.socialAccounts.id })
-            .from(schema.socialAccounts)
-            .where(eq(schema.socialAccounts.workspaceId, ws.id));
-          if (existing.length >= billing.plan.maxSocialAccounts) {
-            set.status = 402;
-            return { error: `Paket ${billing.plan.name} maksimal ${billing.plan.maxSocialAccounts} akun. Upgrade paket untuk menambah akun.` };
-          }
+        const limit = await accountLimitError(ws.id, 1);
+        if (limit) {
+          set.status = 402;
+          return { error: limit };
         }
 
         const account = await connectInstagramAccount(ws.id, token, expiresAt);
@@ -359,6 +366,63 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
       }
     },
     { body: t.Object({ code: t.String({ minLength: 10 }), state: t.Optional(t.String()) }) }
+  )
+
+  // Facebook Pages: step 1 — Facebook Login URL for the "Hubungkan Facebook" button
+  .get('/api/v1/workspaces/:ws/accounts/connect/facebook', ({ workspace, set }) => {
+    try {
+      return buildFacebookAuthUrl(workspace!.slug);
+    } catch (err) {
+      set.status = 500;
+      return { error: (err as Error).message };
+    }
+  })
+
+  // Step 2 — exchange ?code, return the Pages to choose from (+ encrypted ticket holding their tokens)
+  .post(
+    '/api/v1/workspaces/:ws/accounts/connect/facebook',
+    async ({ workspace, body, set }) => {
+      try {
+        if (verifyState(body.state) !== workspace!.slug) throw new Error('OAuth state belongs to another workspace');
+        return await exchangeFacebookCode(workspace!.slug, body.code);
+      } catch (err) {
+        set.status = 400;
+        return { error: (err as Error).message };
+      }
+    },
+    { body: t.Object({ code: t.String({ minLength: 10 }), state: t.String() }) }
+  )
+
+  // Step 3 — connect the chosen Pages, poll immediately
+  .post(
+    '/api/v1/workspaces/:ws/accounts/connect/facebook/pages',
+    async ({ workspace, session, body, set }) => {
+      const ws = workspace!;
+      const limit = await accountLimitError(ws.id, body.pageIds.length);
+      if (limit) {
+        set.status = 402;
+        return { error: limit };
+      }
+      try {
+        const accounts = await connectFacebookPages(ws.id, ws.slug, body.ticket, body.pageIds);
+        for (const account of accounts) {
+          await db.insert(schema.auditLogs).values({
+            workspaceId: ws.id,
+            actor: session?.user.id ?? 'unknown',
+            action: 'account.connected',
+            targetType: 'social_account',
+            targetId: account.id,
+            meta: { platform: 'facebook', page: account.username, via: 'facebook_login' }
+          });
+          await enqueueJob('poll_account', { accountId: account.id });
+        }
+        return { success: true, accounts: accounts.map((a) => ({ ...a, accessTokenEnc: undefined })) };
+      } catch (err) {
+        set.status = 400;
+        return { error: (err as Error).message };
+      }
+    },
+    { body: t.Object({ ticket: t.String(), pageIds: t.Array(t.String(), { minItems: 1, maxItems: 50 }) }) }
   )
 
   .delete('/api/v1/workspaces/:ws/accounts/:id', async ({ session, params }) => {
@@ -966,7 +1030,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         queued,
         hidden
       },
-      medianResponseSec: 360,
+      medianResponseSec: await medianResponseSec(ws.id),
       responseTimeText: '6 Menit (Rata-rata)'
     };
   })
@@ -975,13 +1039,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) return [];
 
-    const metrics = await db.query.dailyMetrics.findMany({
-      where: eq(schema.dailyMetrics.workspaceId, ws.id),
-      orderBy: [desc(schema.dailyMetrics.day)],
-      limit: 14
-    });
-
-    return metrics.reverse();
+    return dailyTrend(ws.id, 14);
   })
 
   // 7. Reports & CSV Export (PRD §5.1 FR-7)
@@ -989,25 +1047,9 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
-    const metrics = await db.query.dailyMetrics.findMany({
-      where: eq(schema.dailyMetrics.workspaceId, ws.id),
-      orderBy: [desc(schema.dailyMetrics.day)],
-      limit: query.period === 'weekly' ? 28 : 14
-    });
-
-    const topPosts = await db.query.posts.findMany({
-      limit: 5
-    });
-
-    return {
-      period: query.period || 'daily',
-      metrics,
-      topPosts: topPosts.map((p, idx) => ({
-        ...p,
-        commentCount: 45 - idx * 8,
-        positiveRatio: 0.85 - idx * 0.05
-      }))
-    };
+    const days = query.period === 'weekly' ? 28 : 14;
+    const [metrics, posts] = await Promise.all([dailyTrend(ws.id, days), topPosts(ws.id, days)]);
+    return { period: query.period || 'daily', metrics: [...metrics].reverse(), topPosts: posts };
   })
 
   .get('/api/v1/workspaces/:ws/reports/export.csv', async ({ session, params, set }) => {

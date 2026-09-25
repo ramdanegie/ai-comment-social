@@ -119,7 +119,8 @@ export interface DashboardSummary {
     queued: number;
     hidden: number;
   };
-  medianResponseSec: number;
+  /** null when no reply has been sent in the window */
+  medianResponseSec: number | null;
   responseTimeText: string;
 }
 

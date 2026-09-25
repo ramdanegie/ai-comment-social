@@ -1018,8 +1018,9 @@ PUBLIC_API_URL=
 - [ ] Webhook terverifikasi (IG `comments`, Page `feed`).
 
 ### C. Permission yang diajukan (MVP saja — jangan minta yang belum dipakai)
-- [ ] `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `pages_manage_engagement`, `pages_manage_metadata`
-- [ ] `instagram_basic`, `instagram_manage_comments`
+- [ ] Facebook Page (Facebook Login for Business): `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `pages_manage_engagement`, `business_management` (Page milik Business portfolio); `pages_manage_metadata` hanya jika webhook Page dipakai
+- [ ] Instagram (Instagram Login, tanpa Page): `instagram_business_basic`, `instagram_business_manage_comments`
+- [ ] Alur Facebook di app: tombol "Hubungkan Facebook" → Login for Business → `/accounts/facebook/callback` → owner memilih Page → token Page disimpan terenkripsi (daftar Page + token dibawa browser hanya sebagai tiket AES-GCM 15 menit)
 - [ ] (P1, pengajuan terpisah) `instagram_manage_insights`, `read_insights`
 
 ### D. Materi App Review

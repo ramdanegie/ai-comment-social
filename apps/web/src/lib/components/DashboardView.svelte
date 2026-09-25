@@ -70,7 +70,7 @@
   const dayLabel = (iso: string) =>
     new Date(iso + 'T00:00:00').toLocaleDateString(isLangEn ? 'en-GB' : 'id-ID', { day: 'numeric', month: 'short' });
 
-  let onTarget = $derived((summary?.medianResponseSec ?? 0) <= RESPONSE_TARGET_SEC);
+  let onTarget = $derived(summary?.medianResponseSec != null && summary.medianResponseSec <= RESPONSE_TARGET_SEC);
 
   const minutes = (sec: number) => Math.max(1, Math.round(sec / 60));
 </script>
@@ -265,6 +265,10 @@
             <Clock class="h-3.5 w-3.5" />
             {isLangEn ? 'Median response time' : 'Median waktu respons'}
           </p>
+          {#if summary.medianResponseSec == null}
+            <p class="mt-1 text-2xl font-semibold text-slate-400">–</p>
+            <p class="mt-1 text-xs text-slate-500">{isLangEn ? 'No replies sent in the last 30 days' : 'Belum ada balasan terkirim 30 hari terakhir'}</p>
+          {:else}
           <p class="mt-1 text-2xl font-semibold tabular-nums text-slate-900 dark:text-white">
             {minutes(summary.medianResponseSec)} <span class="text-base font-normal text-slate-500">{isLangEn ? 'min' : 'menit'}</span>
           </p>
@@ -272,6 +276,7 @@
             {#if onTarget}<CheckCircle2 class="h-3.5 w-3.5" />{:else}<AlertTriangle class="h-3.5 w-3.5" />{/if}
             {isLangEn ? 'Target' : 'Target'} &lt; 15 {isLangEn ? 'min' : 'menit'}
           </p>
+          {/if}
         </div>
       </section>
     </div>

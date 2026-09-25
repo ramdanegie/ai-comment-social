@@ -14,6 +14,7 @@
   } from 'lucide-svelte';
   import InstagramIcon from './icons/InstagramIcon.svelte';
   import FacebookIcon from './icons/FacebookIcon.svelte';
+  import TiktokIcon from './icons/TiktokIcon.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
   import { api } from '../api';
   import type { SocialAccount, Platform } from '../types';
@@ -57,6 +58,18 @@
 
   /** Redirect lands on this same app → go there directly; otherwise open a tab and let the user paste the result. */
   let igSameOrigin = $derived(!!igRedirectUri && typeof window !== 'undefined' && igRedirectUri.startsWith(window.location.origin));
+
+  let fbStarting = $state(false);
+  /** Facebook Login redirects back to /accounts/facebook/callback, where the Pages are picked. */
+  async function startFacebookConnect() {
+    fbStarting = true;
+    try {
+      window.location.href = (await api.getFacebookConnectUrl(workspaceSlug)).url;
+    } catch (err) {
+      toast.error((err as Error).message, isLangEn ? 'Facebook' : 'Facebook');
+      fbStarting = false;
+    }
+  }
 
   async function openInstagramConnect() {
     igModalOpen = true;
@@ -154,8 +167,8 @@
 
 <div class="space-y-6">
   <!-- Header -->
-  <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-    <div>
+  <div class="flex flex-col justify-between gap-4 xl:flex-row xl:items-center">
+    <div class="min-w-0">
       <h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
         {isLangEn ? 'Connected Social Channels' : 'Akun Media Sosial Terhubung'}
       </h1>
@@ -166,7 +179,38 @@
       </p>
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2 xl:shrink-0 xl:flex-nowrap">
+      <!-- TikTok: planned channel, shown for demos (not connectable yet) -->
+      {#each [{ label: 'TikTok', Icon: TiktokIcon }] as ch (ch.label)}
+        <button
+          type="button"
+          aria-disabled="true"
+          title={isLangEn ? 'Coming soon' : 'Segera hadir'}
+          class="relative inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500"
+          onclick={() =>
+            toast.info(
+              isLangEn
+                ? `${ch.label} integration is coming soon. Instagram is available now.`
+                : `Integrasi ${ch.label} segera hadir. Saat ini yang tersedia Instagram.`,
+              isLangEn ? 'Coming soon' : 'Segera hadir'
+            )}
+        >
+          <ch.Icon class="h-4 w-4 opacity-60" />
+          <span>{isLangEn ? `Connect ${ch.label}` : `Hubungkan ${ch.label}`}</span>
+          <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            {isLangEn ? 'Soon' : 'Segera'}
+          </span>
+        </button>
+      {/each}
+      <button
+        type="button"
+        disabled={fbStarting}
+        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        onclick={startFacebookConnect}
+      >
+        <FacebookIcon class="h-4 w-4 text-[#1877F2]" />
+        <span>{isLangEn ? 'Connect Facebook' : 'Hubungkan Facebook'}</span>
+      </button>
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95"

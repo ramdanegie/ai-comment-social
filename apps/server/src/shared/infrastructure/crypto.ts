@@ -48,3 +48,13 @@ export function verifyMidtransSignature(
   const hash = crypto.createHash('sha512').update(raw).digest('hex');
   return hash.toLowerCase() === signatureKey.toLowerCase();
 }
+
+/** Like decryptToken but throws on anything that isn't a valid, untampered ciphertext.
+ *  Use for values that round-trip through the browser (e.g. the Facebook Page ticket). */
+export function decryptTokenStrict(encryptedPayload: string): string {
+  const [ivHex, tagHex, encryptedText] = encryptedPayload.split(':');
+  if (!ivHex || !tagHex || !encryptedText) throw new Error('Invalid ciphertext');
+  const decipher = crypto.createDecipheriv(ALGORITHM, SECRET_KEY, Buffer.from(ivHex, 'hex'));
+  decipher.setAuthTag(Buffer.from(tagHex, 'hex'));
+  return decipher.update(encryptedText, 'hex', 'utf8') + decipher.final('utf8');
+}

@@ -203,15 +203,22 @@
     </p>
 
     <div class="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+      {#if topPosts.length === 0}
+        <p class="py-6 text-center text-sm text-slate-400">Belum ada komentar pada periode ini.</p>
+      {/if}
       {#each topPosts as p, idx}
         <div class="flex items-center justify-between py-3">
           <div class="flex items-center gap-3">
             <span class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               #{idx + 1}
             </span>
-            <img src={p.mediaUrl} alt="Post" class="h-10 w-10 rounded-lg object-cover" />
+            {#if p.mediaUrl}
+              <img src={p.mediaUrl} alt="Post" class="h-10 w-10 rounded-lg object-cover" />
+            {:else}
+              <span class="h-10 w-10 rounded-lg bg-slate-100 dark:bg-slate-800"></span>
+            {/if}
             <div class="max-w-md">
-              <p class="text-xs font-semibold text-slate-900 dark:text-white truncate">{p.caption}</p>
+              <p class="text-xs font-semibold text-slate-900 dark:text-white truncate">{p.caption || 'Tanpa caption'}</p>
               <span class="text-[11px] text-slate-400">{p.commentCount} komentar terkumpul</span>
             </div>
           </div>

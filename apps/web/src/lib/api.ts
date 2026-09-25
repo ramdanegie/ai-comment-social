@@ -249,6 +249,40 @@ export const api = {
     return data.account;
   },
 
+  // Facebook Pages (Facebook Login): URL → ?code → pick Pages
+  async getFacebookConnectUrl(ws: string): Promise<{ url: string; redirectUri: string }> {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/facebook`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menyiapkan koneksi Facebook');
+    return data;
+  },
+
+  async exchangeFacebookCode(
+    ws: string,
+    code: string,
+    state: string
+  ): Promise<{ ticket: string; pages: Array<{ id: string; name: string; pictureUrl: string | null; instagramUsername: string | null }> }> {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/facebook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, state })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal membaca Facebook Page');
+    return data;
+  },
+
+  async connectFacebookPages(ws: string, ticket: string, pageIds: string[]): Promise<SocialAccount[]> {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/facebook/pages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket, pageIds })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menghubungkan Facebook Page');
+    return data.accounts;
+  },
+
   /** Queue an immediate poll of the account's latest posts/comments. */
   async syncAccount(ws: string, accountId: string): Promise<void> {
     const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/sync`, { method: 'POST' });

@@ -21,7 +21,11 @@ function config() {
 
 // ---------- OAuth state (CSRF + which workspace started the flow) ----------
 
-const stateKey = () => process.env.TOKEN_ENCRYPTION_KEY || config().appSecret;
+const stateKey = () => {
+  const key = process.env.TOKEN_ENCRYPTION_KEY || process.env.META_IG_APP_SECRET || process.env.META_APP_SECRET;
+  if (!key) throw new Error('TOKEN_ENCRYPTION_KEY must be set');
+  return key;
+};
 const sign = (payload: string) => crypto.createHmac('sha256', stateKey()).update(payload).digest('base64url');
 
 export function createState(workspaceSlug: string): string {
@@ -107,17 +111,21 @@ export async function connectInstagramAccount(workspaceId: string, token: string
     .onConflictDoUpdate({ target: [schema.socialAccounts.platform, schema.socialAccounts.externalId], set: values })
     .returning();
 
+  await ensureDefaultPolicy(account.id, me.username);
+  return account;
+}
+
+/** First connect only: Shadow-mode policy (PRD §10.1 — nothing is sent until the owner changes the mode). */
+export async function ensureDefaultPolicy(socialAccountId: string, brandName: string) {
   await db
     .insert(schema.replyPolicies)
     .values({
-      socialAccountId: account.id,
-      mode: 'shadow', // PRD §10.1: nothing is sent until the owner changes the mode
+      socialAccountId,
+      mode: 'shadow',
       autoReplyIntents: ['praise', 'purchase_intent'],
       minConfidence: 0.8,
       customBlockedKeywords: [],
-      brandVoice: { brandName: me.username, tone: 'Ramah dan profesional', useEmoji: true, cta: 'Silakan DM kami ya kak!', forbiddenPhrases: [] }
+      brandVoice: { brandName, tone: 'Ramah dan profesional', useEmoji: true, cta: 'Silakan DM kami ya kak!', forbiddenPhrases: [] }
     })
     .onConflictDoNothing({ target: schema.replyPolicies.socialAccountId });
-
-  return account;
 }
