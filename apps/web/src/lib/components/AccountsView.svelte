@@ -279,7 +279,7 @@
               type="button"
               class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
               onclick={() => handleDisconnectClick(acc)}
-              title="Putus koneksi akun"
+              title={isLangEn ? 'Disconnect account' : 'Putus koneksi akun'}
             >
               <Trash2 class="h-4 w-4" />
             </button>
