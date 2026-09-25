@@ -6,6 +6,7 @@
     Sliders,
     MoreHorizontal
   } from 'lucide-svelte';
+  import { pathFor } from '../nav';
 
   let {
     activePage = 'dashboard',
@@ -33,8 +34,9 @@
   {#each bottomItems as item}
     {@const isActive = activePage === item.id}
     {@const Icon = item.icon}
-    <button
-      type="button"
+    <a
+      href={pathFor(item.id)}
+      aria-current={isActive ? 'page' : undefined}
       class="relative flex flex-1 flex-col items-center justify-center py-1 text-[11px] font-medium transition-colors {isActive
         ? 'text-brand-500 dark:text-brand-400 font-semibold'
         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'}"
@@ -49,7 +51,7 @@
         {/if}
       </div>
       <span class="mt-1 leading-none">{isLangEn ? item.labelEn : item.labelId}</span>
-    </button>
+    </a>
   {/each}
 
   <button

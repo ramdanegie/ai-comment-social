@@ -2,12 +2,84 @@
 
 Panduan menghubungkan akun **Instagram Professional** dan **Facebook Page** ke Replyra dalam **Development Mode** Meta (tanpa App Review, tanpa Business Verification).
 
-- [Bagian A — Sisi Meta](#bagian-a--sisi-meta)
+- [Pilih jalur](#pilih-jalur)
+- [Jalur IG — Instagram saja (tanpa Facebook Page)](#jalur-ig--instagram-saja-tanpa-facebook-page) ✅ *sudah terbukti jalan*
+- [Bagian A — Sisi Meta (jalur Facebook Login)](#bagian-a--sisi-meta)
 - [Bagian B — Sisi aplikasi Replyra](#bagian-b--sisi-aplikasi-replyra)
 - [Troubleshooting](#troubleshooting)
 - [Batasan Development Mode](#batasan-development-mode)
 
-> **Jalur yang dipakai:** *Instagram API with Facebook Login* (host `graph.facebook.com`). Satu Page access token dipakai untuk Page **dan** akun IG yang tertaut ke Page itu. Ini sesuai PRD FR-2.
+## Pilih jalur
+
+| | **Jalur IG** — Instagram Login | **Jalur FB** — Facebook Login |
+|---|---|---|
+| Butuh Facebook Page? | ❌ Tidak | ✅ Ya, IG harus tertaut ke Page |
+| Bisa baca komentar Facebook Page? | ❌ | ✅ |
+| Host API | `graph.instagram.com` | `graph.facebook.com` |
+| Permission | `instagram_business_basic`, `instagram_business_manage_comments` | `pages_*`, `instagram_basic`, `instagram_manage_comments`, `business_management` |
+| Masa token | 60 hari, **diperpanjang otomatis** oleh worker | Page token tidak kedaluwarsa |
+| Perintah CLI | `connect-ig-code` / `connect-ig` | `connect` |
+
+Replyra memilih host otomatis per akun (dari scope yang tersimpan), jadi kedua jalur bisa dipakai bersamaan dalam satu workspace.
+
+---
+
+## Jalur IG — Instagram saja (tanpa Facebook Page)
+
+### IG-1. Sisi Meta
+
+1. **Akun IG harus Professional** (Business/Creator): App Instagram → Settings → *Account type and tools* → *Switch to professional account*.
+2. **Permission** — App Dashboard → **Use cases → Manage messaging & content on Instagram → Customize → Permissions and features** → *Add* sampai **Ready for testing**:
+   - `instagram_business_basic`
+   - `instagram_business_manage_comments`
+3. **Instagram Tester** — **App roles → Roles → Add People → Instagram Tester** → isi username IG.
+   Terima undangan di IG: *instagram.com → Settings → Apps and websites → Tester invites → Accept*.
+4. **Catat kredensial Instagram** — tab **API setup with Instagram login**:
+   - *Instagram app ID* → `META_IG_APP_ID`
+   - *Instagram app secret* (klik *Show*, Meta minta password ulang) → `META_IG_APP_SECRET`
+   > Ini **berbeda** dari App ID/Secret di *App settings → Basic*.
+5. **Redirect URL** — bagian **4. Set up Instagram business login → Set up** → isi redirect HTTPS milikmu, mis. `https://creativeshine.id/` → *Save*. Nilai yang **sama persis** → `META_IG_REDIRECT_URI`.
+
+> Tombol **Generate token** di dashboard membuka popup. Kalau popup diblokir, token bawaan dashboard tidak bisa diambil — pakai IG-2 di bawah (tidak butuh popup).
+
+### IG-2. Ambil kode otorisasi
+
+Buka di browser (login ke akun IG yang dimaksud), ganti `IG_APP_ID` dan `REDIRECT` (URL-encoded):
+
+```
+https://www.instagram.com/oauth/authorize?client_id=IG_APP_ID&redirect_uri=https%3A%2F%2Fcreativeshine.id%2F&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_comments
+```
+
+Klik **Allow** → browser pindah ke `https://creativeshine.id/?code=AQB…#_`.
+Salin nilai `code` (tanpa `#_`). **Berlaku ±1 jam dan hanya sekali pakai.**
+
+### IG-3. Sisi aplikasi
+
+```bash
+cd apps/server
+# .env: META_IG_APP_ID, META_IG_APP_SECRET, META_IG_REDIRECT_URI terisi
+
+META_CODE='AQB…' bun scripts/meta-dev.ts connect-ig-code maujahit
+# ✓ Code exchanged … ✓ Long-lived Instagram token (~60 days)
+# ✓ instagram @username → social_account <id>
+
+bun scripts/meta-dev.ts comments <social_account_id>   # cek post + komentar dari Meta
+bun scripts/meta-dev.ts poll     <social_account_id>   # tarik ke Replyra
+```
+
+Sudah punya token IG (mis. dari tombol *Generate token* di dashboard)? Pakai:
+
+```bash
+META_TOKEN='IGAA…' bun scripts/meta-dev.ts connect-ig maujahit
+```
+
+Lanjutkan ke [B4. Jalankan aplikasi](#b4-jalankan-aplikasi).
+
+> **Untuk demo:** komentar dari akun IG **sendiri diabaikan** (invariant PRD §4.3-4). Minta akun lain berkomentar di post terbaru, lalu klik **Sinkronkan** di halaman Akun Terhubung.
+
+---
+
+> **Jalur FB** (Bagian A di bawah): *Instagram API with Facebook Login* (host `graph.facebook.com`). Satu Page access token dipakai untuk Page **dan** akun IG yang tertaut ke Page itu. Ini sesuai PRD FR-2.
 
 ---
 
@@ -115,6 +187,9 @@ File: `apps/server/.env` (contoh lengkap di `apps/server/.env.example`). **Janga
 | `META_APP_ID` | dari A4 |
 | `META_APP_SECRET` | dari A4 |
 | `META_WEBHOOK_VERIFY_TOKEN` | string acak (dipakai saat daftar webhook, nanti setelah Live) |
+| `META_IG_APP_ID` | *Jalur IG* — Instagram app ID (IG-1 no. 4) |
+| `META_IG_APP_SECRET` | *Jalur IG* — Instagram app secret (IG-1 no. 4) |
+| `META_IG_REDIRECT_URI` | *Jalur IG* — sama persis dengan redirect di IG-1 no. 5 |
 | `META_GRAPH_VERSION` | `v25.0` |
 | `META_POLL_INTERVAL_SEC` | jeda polling komentar, mis. `120` untuk demo |
 | `META_POLL_POSTS` | jumlah post terbaru per akun yang dicek, mis. `10` |
@@ -177,11 +252,23 @@ Restart `server` dan `worker` setiap kali `.env` diubah.
 
 ### B5. Alur pemakaian di UI
 
-1. **Akun Terhubung** → kartu akun menampilkan *Sinkron x menit lalu*. Klik **Sinkronkan** untuk menarik komentar sekarang.
+| Halaman | URL |
+|---|---|
+| Login | `/login` (setelah login kembali ke `?redirect=…`) |
+| Dashboard | `/dashboard` |
+| Antrean Review | `/review` |
+| Semua Komentar | `/comments` |
+| Akun Terhubung | `/accounts` |
+| Aturan Balasan | `/policies` |
+| Laporan | `/reports` |
+| Kuota & Paket | `/billing` |
+| Tim & Audit Log | `/settings` |
+
+1. **Akun Terhubung** (`/accounts`) → kartu akun menampilkan *Sinkron x menit lalu*. Klik **Sinkronkan** untuk menarik komentar sekarang.
 2. Komentar baru otomatis diklasifikasi → masuk **Antrean Review** (mode Shadow/Assisted) atau dibalas otomatis (mode Auto, hanya intent yang diizinkan).
-3. **Antrean Review** → pilih komentar → edit draft → **Kirim balasan** / **Sembunyikan** / **Tutup**. Shortcut: `J/K` pindah, `E` edit, `A` kirim, `H` sembunyikan, `D` tutup.
+3. **Antrean Review** (`/review`) → pilih komentar → edit draft → **Kirim balasan** / **Sembunyikan** / **Tutup**. Shortcut: `J/K` pindah, `E` edit, `A` kirim, `H` sembunyikan, `D` tutup.
 4. Aksi dijalankan worker (status *Sedang dikirim* → *Terbalas*). Gagal 3× → *Gagal Kirim*.
-5. **Aturan Balasan** → naikkan mode `shadow → assisted → auto` setelah yakin dengan kualitas draft.
+5. **Aturan Balasan** (`/policies`) → naikkan mode `shadow → assisted → auto` setelah yakin dengan kualitas draft.
 
 ### B6. Kirim sungguhan ke Instagram/Facebook
 
@@ -210,6 +297,9 @@ lalu restart worker.
 | `(#10) … requires … permission` / `(#200)` | Permission kurang atau user tidak punya role di Page | Cek A3, dan pastikan kamu admin Page |
 | Akun berubah jadi *Token kedaluwarsa* | Graph error 190 (password diganti, izin dicabut, atau `TOKEN_ENCRYPTION_KEY` berubah) | Ulangi A5 → `connect` |
 | Komentar FB tanpa nama penulis | `from` hanya dikembalikan untuk user dengan role di app saat Development Mode | Normal di dev mode; lengkap setelah Advanced Access |
+| `Invalid redirect_uri` saat tukar kode IG | `META_IG_REDIRECT_URI` beda dengan redirect saat authorize, atau belum disimpan di *Set up Instagram business login* | Samakan persis (termasuk `/` di akhir) |
+| `Invalid authorization code` / `code has been used` | Kode IG kedaluwarsa (1 jam) atau sudah dipakai | Ulangi IG-2 |
+| Poll sukses tapi `newComments: 0` | Post belum punya komentar, atau komentar dari akun sendiri (sengaja diabaikan) | Komentar dari akun lain di post terbaru |
 | Komentar baru tidak langsung masuk | Tidak ada webhook di dev mode; komentar datang lewat polling | Tunggu `META_POLL_INTERVAL_SEC` atau klik **Sinkronkan** |
 
 ---

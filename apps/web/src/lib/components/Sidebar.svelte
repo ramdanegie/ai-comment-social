@@ -14,6 +14,7 @@
     PanelLeftOpen
   } from 'lucide-svelte';
   import type { UserRole } from '../types';
+  import { pathFor } from '../nav';
 
   let {
     activePage = 'dashboard',
@@ -158,8 +159,9 @@
 
         {#if !isCollapsed}
           <!-- Expanded Nav Button -->
-          <button
-            type="button"
+          <a
+            href={pathFor(item.id)}
+            aria-current={isActive ? 'page' : undefined}
             class="group flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-all {isActive
               ? 'bg-brand-500/10 text-brand-600 shadow-2xs dark:bg-brand-500/15 dark:text-brand-500 border border-brand-500/20'
               : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'}"
@@ -177,11 +179,12 @@
                 {pendingReviewCount}
               </span>
             {/if}
-          </button>
+          </a>
         {:else}
           <!-- Collapsed Nav Button (Icon + Tooltip) -->
-          <button
-            type="button"
+          <a
+            href={pathFor(item.id)}
+            aria-current={isActive ? 'page' : undefined}
             class="relative flex h-10 w-full items-center justify-center rounded-xl text-xs font-semibold transition-all {isActive
               ? 'bg-brand-500/10 text-brand-600 shadow-2xs dark:bg-brand-500/15 dark:text-brand-500 border border-brand-500/20'
               : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-slate-100'}"
@@ -198,7 +201,7 @@
                 <span class="h-2 w-2 rounded-full bg-brand-500 ring-2 ring-white dark:ring-slate-950"></span>
               </span>
             {/if}
-          </button>
+          </a>
         {/if}
       {/each}
     </nav>
@@ -208,8 +211,8 @@
   <div class="shrink-0 space-y-2.5 border-t border-slate-100 pt-3 dark:border-slate-800/80">
     {#if !isCollapsed}
       <!-- Expanded: AI Units Mini Progress Card -->
-      <button
-        type="button"
+      <a
+        href={pathFor('billing')}
         class="w-full text-left rounded-xl border border-slate-200/70 bg-slate-50/70 p-2.5 transition hover:border-slate-300 dark:border-slate-800/70 dark:bg-slate-900/60 dark:hover:border-slate-700"
         onclick={() => onSelectPage('billing')}
         title="Lihat detail penggunaan kuota"
@@ -225,7 +228,7 @@
           <span>26% Terpakai</span>
           <span class="text-emerald-600 dark:text-emerald-400 font-medium">Aktif</span>
         </div>
-      </button>
+      </a>
 
       <!-- Expanded: User Account Info -->
       <div class="space-y-1">
@@ -257,8 +260,8 @@
       </div>
     {:else}
       <!-- Collapsed: AI Quota Compact Icon Button -->
-      <button
-        type="button"
+      <a
+        href={pathFor('billing')}
         class="flex h-10 w-full items-center justify-center rounded-xl border border-slate-200/70 bg-slate-50/70 text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800/70 dark:bg-slate-900/60 dark:text-slate-400 dark:hover:bg-slate-800"
         onclick={() => onSelectPage('billing')}
         title={isLangEn ? 'AI Quota' : 'Kuota AI'}
@@ -268,7 +271,7 @@
           <CreditCard class="h-4.5 w-4.5 text-brand-500 dark:text-brand-500" />
           <span class="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-emerald-500 ring-1 ring-white dark:ring-slate-900"></span>
         </div>
-      </button>
+      </a>
 
       <!-- Collapsed: Avatar + Compact Logout Button -->
       <div class="flex flex-col items-center gap-1.5">

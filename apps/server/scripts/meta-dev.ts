@@ -4,6 +4,7 @@
 //   bun scripts/meta-dev.ts pages      <user_token>              → list Pages + linked IG accounts
 //   bun scripts/meta-dev.ts connect    <workspace> <user_token>  → exchange to long-lived, save Page + IG accounts
 //   bun scripts/meta-dev.ts connect-ig <workspace> <ig_token>    → Instagram Login token (no Facebook Page needed)
+//   bun scripts/meta-dev.ts connect-ig-code <workspace> <code>   → exchange ?code= from Instagram business login redirect, then connect
 //   bun scripts/meta-dev.ts poll    <social_account_id>       → poll once now (no worker needed)
 //   bun scripts/meta-dev.ts comments <social_account_id>      → print latest remote posts + comments (read-only)
 //
@@ -33,6 +34,7 @@ function usage(): never {
   bun scripts/meta-dev.ts pages      <user_token>
   bun scripts/meta-dev.ts connect    <workspace_slug> <user_token>
   bun scripts/meta-dev.ts connect-ig <workspace_slug> <ig_token>
+  bun scripts/meta-dev.ts connect-ig-code <workspace_slug> <code>
   bun scripts/meta-dev.ts poll     <social_account_id>
   bun scripts/meta-dev.ts comments <social_account_id>`);
   process.exit(1);
@@ -133,6 +135,29 @@ async function main() {
       break;
     }
 
+    case 'connect-ig-code': {
+      // Code from https://www.instagram.com/oauth/authorize?...&redirect_uri=META_IG_REDIRECT_URI (valid ~1h, single use)
+      const slug = args[0];
+      const code = (args[1] || process.env.META_CODE || '').replace(/#_$/, '');
+      const redirectUri = process.env.META_IG_REDIRECT_URI;
+      if (!slug || !code) usage();
+      if (!process.env.META_IG_APP_ID || !process.env.META_IG_APP_SECRET || !redirectUri) {
+        throw new Error('META_IG_APP_ID, META_IG_APP_SECRET and META_IG_REDIRECT_URI are required');
+      }
+      const form = new FormData();
+      form.set('client_id', process.env.META_IG_APP_ID);
+      form.set('client_secret', process.env.META_IG_APP_SECRET);
+      form.set('grant_type', 'authorization_code');
+      form.set('redirect_uri', redirectUri);
+      form.set('code', code);
+      const res = (await (await fetch('https://api.instagram.com/oauth/access_token', { method: 'POST', body: form })).json()) as any;
+      const data = Array.isArray(res.data) ? res.data[0] : res;
+      if (!data?.access_token) throw new Error(`Code exchange failed: ${res.error_message ?? JSON.stringify(res)}`);
+      console.log(`✓ Code exchanged (permissions: ${data.permissions})`);
+      process.env.META_TOKEN = data.access_token;
+      args.splice(1, 1);
+    }
+    // falls through
     case 'connect-ig': {
       const slug = args[0];
       let token = tokenArg(1);
