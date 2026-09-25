@@ -8,6 +8,12 @@ import { ReplyPolicyEvaluator } from './contexts/response/domain/ReplyPolicyEval
 import { LlmReplyGenerator } from './contexts/response/domain/LlmReplyGenerator';
 import { encryptToken, verifyMetaSignature, verifyMidtransSignature } from './shared/infrastructure/crypto';
 import { enqueueJob } from './contexts/engagement/application/MetaIngestion';
+import {
+  buildInstagramAuthUrl,
+  connectInstagramAccount,
+  exchangeInstagramCode,
+  verifyState
+} from './contexts/channel/application/ConnectInstagram';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3099;
 
@@ -391,6 +397,56 @@ export const app = new Elysia()
         accessToken: t.String()
       })
     }
+  )
+
+  // Instagram Login (no Facebook Page): step 1 — URL for the "Hubungkan Instagram" button
+  .get('/api/v1/workspaces/:ws/accounts/connect/instagram', async ({ params, set }) => {
+    const ws = await getWorkspaceBySlugOrId(params.ws);
+    if (!ws) {
+      set.status = 404;
+      return { error: 'Workspace not found' };
+    }
+    try {
+      return buildInstagramAuthUrl(ws.slug);
+    } catch (err) {
+      set.status = 500;
+      return { error: (err as Error).message };
+    }
+  })
+
+  // Step 2 — exchange the ?code from the redirect, connect the account, poll immediately
+  .post(
+    '/api/v1/workspaces/:ws/accounts/connect/instagram',
+    async ({ params, body, set }) => {
+      const ws = await getWorkspaceBySlugOrId(params.ws);
+      if (!ws) {
+        set.status = 404;
+        return { error: 'Workspace not found' };
+      }
+      try {
+        // State is required on the redirect flow; manual paste may omit it (user-initiated, same session).
+        if (body.state && verifyState(body.state) !== ws.slug) throw new Error('OAuth state belongs to another workspace');
+
+        const { token, expiresAt } = await exchangeInstagramCode(body.code);
+        const account = await connectInstagramAccount(ws.id, token, expiresAt);
+
+        await db.insert(schema.auditLogs).values({
+          workspaceId: ws.id,
+          actor: 'user',
+          action: 'account.connected',
+          targetType: 'social_account',
+          targetId: account.id,
+          meta: { platform: 'instagram', username: account.username, via: 'instagram_login' }
+        });
+        await enqueueJob('poll_account', { accountId: account.id });
+
+        return { success: true, account: { ...account, accessTokenEnc: undefined } };
+      } catch (err) {
+        set.status = 400;
+        return { error: (err as Error).message };
+      }
+    },
+    { body: t.Object({ code: t.String({ minLength: 10 }), state: t.Optional(t.String()) }) }
   )
 
   .delete('/api/v1/workspaces/:ws/accounts/:id', async ({ params }) => {

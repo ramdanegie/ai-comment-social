@@ -9,7 +9,8 @@
     Shield,
     ExternalLink,
     Lock,
-    Key
+    Key,
+    X
   } from 'lucide-svelte';
   import InstagramIcon from './icons/InstagramIcon.svelte';
   import FacebookIcon from './icons/FacebookIcon.svelte';
@@ -47,6 +48,67 @@
   let loading: boolean = $state(true);
   let isConnecting: boolean = $state(false);
   let showConnectModal: boolean = $state(false);
+
+  // ---- Instagram Login (real connection) ----
+  let igModalOpen = $state(false);
+  let igAuthUrl = $state<string | null>(null);
+  let igRedirectUri = $state('');
+  let igPasted = $state('');
+  let igBusy = $state(false);
+  let igError = $state<string | null>(null);
+
+  /** Redirect lands on this same app → go there directly; otherwise open a tab and let the user paste the result. */
+  let igSameOrigin = $derived(!!igRedirectUri && typeof window !== 'undefined' && igRedirectUri.startsWith(window.location.origin));
+
+  async function openInstagramConnect() {
+    igModalOpen = true;
+    igError = null;
+    igPasted = '';
+    igAuthUrl = null;
+    try {
+      const res = await api.getInstagramConnectUrl(workspaceSlug);
+      igAuthUrl = res.url;
+      igRedirectUri = res.redirectUri;
+    } catch (err) {
+      igError = (err as Error).message;
+    }
+  }
+
+  /** Accepts the full redirected URL (…?code=…&state=…) or just the code. */
+  function parsePasted(input: string): { code: string; state?: string } | null {
+    const text = input.trim();
+    if (!text) return null;
+    try {
+      const u = new URL(text);
+      const code = u.searchParams.get('code');
+      return code ? { code: code.replace(/#_$/, ''), state: u.searchParams.get('state') ?? undefined } : null;
+    } catch {
+      return { code: text.replace(/#_$/, '') };
+    }
+  }
+
+  async function submitInstagramCode() {
+    const parsed = parsePasted(igPasted);
+    if (!parsed) {
+      igError = isLangEn ? 'Paste the redirected URL or the code.' : 'Tempel URL hasil redirect atau kodenya.';
+      return;
+    }
+    igBusy = true;
+    igError = null;
+    try {
+      const acc = await api.connectInstagram(workspaceSlug, parsed.code, parsed.state);
+      toast.success(
+        isLangEn ? `@${acc.username} connected. Pulling comments…` : `@${acc.username} terhubung. Komentar sedang ditarik…`,
+        isLangEn ? 'Instagram connected' : 'Instagram terhubung'
+      );
+      igModalOpen = false;
+      await loadAccounts();
+    } catch (err) {
+      igError = (err as Error).message;
+    } finally {
+      igBusy = false;
+    }
+  }
 
   // Disconnect modal state
   let isDisconnectModalOpen: boolean = $state(false);
@@ -131,14 +193,25 @@
       </p>
     </div>
 
-    <button
-      type="button"
-      class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95"
-      onclick={() => (showConnectModal = true)}
-    >
-      <Plus class="h-4 w-4" />
-      <span>{isLangEn ? 'Connect New Account' : 'Hubungkan Akun Baru'}</span>
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800"
+        onclick={() => (showConnectModal = true)}
+        title={isLangEn ? 'Add a fake account for demos' : 'Tambah akun palsu untuk demo'}
+      >
+        <Plus class="h-3.5 w-3.5" />
+        {isLangEn ? 'Manual (demo)' : 'Manual (demo)'}
+      </button>
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-brand-600 active:scale-95"
+        onclick={openInstagramConnect}
+      >
+        <InstagramIcon class="h-4 w-4" />
+        <span>{isLangEn ? 'Connect Instagram' : 'Hubungkan Instagram'}</span>
+      </button>
+    </div>
   </div>
 
   <!-- Accounts Cards List -->
@@ -328,3 +401,110 @@
   isDanger={true}
   onConfirm={handleConfirmDisconnect}
 />
+
+{#if igModalOpen}
+  <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-xs sm:items-center" role="presentation">
+    <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl dark:bg-slate-900" role="dialog" aria-modal="true" aria-labelledby="ig-connect-title">
+      <div class="flex items-start justify-between border-b border-slate-100 p-5 dark:border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-50 text-pink-600 dark:bg-pink-950/40 dark:text-pink-400">
+            <InstagramIcon class="h-5 w-5" />
+          </span>
+          <div>
+            <h2 id="ig-connect-title" class="text-base font-semibold text-slate-900 dark:text-white">
+              {isLangEn ? 'Connect Instagram' : 'Hubungkan Instagram'}
+            </h2>
+            <p class="text-xs text-slate-500">{isLangEn ? 'Professional account, no Facebook Page needed' : 'Akun Professional, tanpa Facebook Page'}</p>
+          </div>
+        </div>
+        <button type="button" class="rounded-lg p-1 text-slate-400 hover:text-slate-700" aria-label="Tutup" onclick={() => (igModalOpen = false)}>
+          <X class="h-5 w-5" />
+        </button>
+      </div>
+
+      <div class="space-y-5 p-5 text-sm">
+        <ol class="space-y-4">
+          <li class="flex gap-3">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">1</span>
+            <div class="text-slate-600 dark:text-slate-300">
+              {isLangEn ? 'In your browser, sign in to' : 'Di browser, login ke'} <strong>instagram.com</strong>
+              {isLangEn ? 'with the account you want to connect.' : 'dengan akun yang mau dihubungkan.'}
+              <p class="mt-1 text-xs text-slate-400">
+                {isLangEn
+                  ? 'While the Meta app is in development mode, the account must be an Instagram Tester.'
+                  : 'Selama app Meta masih development mode, akun harus terdaftar sebagai Instagram Tester.'}
+              </p>
+            </div>
+          </li>
+          <li class="flex gap-3">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">2</span>
+            <div class="flex-1 space-y-2">
+              <p class="text-slate-600 dark:text-slate-300">
+                {isLangEn ? 'Allow Replyra to read and manage comments.' : 'Izinkan Replyra membaca & mengelola komentar.'}
+              </p>
+              {#if igAuthUrl}
+                <a
+                  href={igAuthUrl}
+                  target={igSameOrigin ? undefined : '_blank'}
+                  rel="noopener noreferrer"
+                  class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-500 px-4 text-sm font-semibold text-white transition hover:bg-brand-600"
+                >
+                  <InstagramIcon class="h-4 w-4" />
+                  {isLangEn ? 'Continue to Instagram' : 'Lanjut ke Instagram'}
+                  {#if !igSameOrigin}<ExternalLink class="h-3.5 w-3.5" />{/if}
+                </a>
+              {:else if !igError}
+                <span class="text-xs text-slate-400">{isLangEn ? 'Preparing…' : 'Menyiapkan…'}</span>
+              {/if}
+            </div>
+          </li>
+          {#if !igSameOrigin}
+            <li class="flex gap-3">
+              <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">3</span>
+              <div class="flex-1 space-y-2">
+                <label for="ig-pasted" class="block text-slate-600 dark:text-slate-300">
+                  {isLangEn ? 'After Allow you land on' : 'Setelah Allow kamu diarahkan ke'}
+                  <code class="rounded bg-slate-100 px-1 text-xs dark:bg-slate-800">{igRedirectUri}</code>.
+                  {isLangEn ? 'Copy that full URL and paste it here:' : 'Salin URL lengkapnya lalu tempel di sini:'}
+                </label>
+                <input
+                  id="ig-pasted"
+                  bind:value={igPasted}
+                  placeholder="https://…/?code=AQB…&state=…"
+                  class="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 font-mono text-xs text-slate-900 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                />
+                <p class="text-xs text-slate-400">
+                  {isLangEn ? 'The code is valid for 1 hour and works once.' : 'Kode berlaku 1 jam dan hanya bisa dipakai sekali.'}
+                </p>
+              </div>
+            </li>
+          {/if}
+        </ol>
+
+        {#if igError}
+          <div class="flex items-start gap-2 rounded-lg bg-rose-50 px-3 py-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" role="alert">
+            <AlertCircle class="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{igError}</span>
+          </div>
+        {/if}
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3 dark:border-slate-800 dark:bg-slate-900/60">
+        <button type="button" class="h-9 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-200/60 dark:text-slate-300" onclick={() => (igModalOpen = false)}>
+          {isLangEn ? 'Cancel' : 'Batal'}
+        </button>
+        {#if !igSameOrigin}
+          <button
+            type="button"
+            class="inline-flex h-9 items-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            disabled={igBusy || !igPasted.trim()}
+            onclick={submitInstagramCode}
+          >
+            {#if igBusy}<RefreshCw class="h-4 w-4 animate-spin" />{/if}
+            {isLangEn ? 'Connect' : 'Hubungkan'}
+          </button>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}

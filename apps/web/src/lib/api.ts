@@ -218,6 +218,26 @@ export const api = {
     return res.ok;
   },
 
+  /** Instagram Login: authorize URL (with signed state) for the "Hubungkan Instagram" button. */
+  async getInstagramConnectUrl(ws: string = 'maujahit'): Promise<{ url: string; redirectUri: string }> {
+    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menyiapkan koneksi Instagram');
+    return data;
+  },
+
+  /** Exchange the ?code from Instagram's redirect and connect the account. */
+  async connectInstagram(ws: string = 'maujahit', code: string, state?: string): Promise<SocialAccount> {
+    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, state })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Gagal menghubungkan Instagram');
+    return data.account;
+  },
+
   /** Queue an immediate poll of the account's latest posts/comments. */
   async syncAccount(ws: string = 'maujahit', accountId: string): Promise<void> {
     const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/sync`, { method: 'POST' });

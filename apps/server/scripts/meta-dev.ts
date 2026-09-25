@@ -17,13 +17,13 @@ import { eq } from 'drizzle-orm';
 import {
   exchangeForLongLivedUserToken,
   exchangeInstagramToken,
-  getInstagramLoginProfile,
   listPagesWithInstagram,
   metaApiFor,
   MetaGraph,
   type MetaPage
 } from '../src/contexts/channel/infrastructure/MetaGraphClient';
 import { isMetaPlatform, pollAccount } from '../src/contexts/engagement/application/MetaIngestion';
+import { connectInstagramAccount, exchangeInstagramCode } from '../src/contexts/channel/application/ConnectInstagram';
 import { decryptToken, encryptToken } from '../src/shared/infrastructure/crypto';
 
 const [cmd, ...args] = process.argv.slice(2);
@@ -136,28 +136,19 @@ async function main() {
     }
 
     case 'connect-ig-code': {
-      // Code from https://www.instagram.com/oauth/authorize?...&redirect_uri=META_IG_REDIRECT_URI (valid ~1h, single use)
+      // ?code= from the Instagram redirect to META_IG_REDIRECT_URI (valid ~1h, single use)
       const slug = args[0];
-      const code = (args[1] || process.env.META_CODE || '').replace(/#_$/, '');
-      const redirectUri = process.env.META_IG_REDIRECT_URI;
+      const code = args[1] || process.env.META_CODE || '';
       if (!slug || !code) usage();
-      if (!process.env.META_IG_APP_ID || !process.env.META_IG_APP_SECRET || !redirectUri) {
-        throw new Error('META_IG_APP_ID, META_IG_APP_SECRET and META_IG_REDIRECT_URI are required');
-      }
-      const form = new FormData();
-      form.set('client_id', process.env.META_IG_APP_ID);
-      form.set('client_secret', process.env.META_IG_APP_SECRET);
-      form.set('grant_type', 'authorization_code');
-      form.set('redirect_uri', redirectUri);
-      form.set('code', code);
-      const res = (await (await fetch('https://api.instagram.com/oauth/access_token', { method: 'POST', body: form })).json()) as any;
-      const data = Array.isArray(res.data) ? res.data[0] : res;
-      if (!data?.access_token) throw new Error(`Code exchange failed: ${res.error_message ?? JSON.stringify(res)}`);
-      console.log(`✓ Code exchanged (permissions: ${data.permissions})`);
-      process.env.META_TOKEN = data.access_token;
-      args.splice(1, 1);
+      const ws = await db.query.workspaces.findFirst({ where: eq(schema.workspaces.slug, slug) });
+      if (!ws) throw new Error(`Workspace "${slug}" not found`);
+      const { token, expiresAt } = await exchangeInstagramCode(code);
+      const acc = await connectInstagramAccount(ws.id, token, expiresAt);
+      console.log(`✓ instagram @${acc.username} → social_account ${acc.id}`);
+      console.log('\nNext: `poll <social_account_id>` or run the worker.');
+      break;
     }
-    // falls through
+
     case 'connect-ig': {
       const slug = args[0];
       let token = tokenArg(1);
@@ -165,26 +156,17 @@ async function main() {
       const ws = await db.query.workspaces.findFirst({ where: eq(schema.workspaces.slug, slug) });
       if (!ws) throw new Error(`Workspace "${slug}" not found`);
 
-      // Dashboard tokens are already long-lived; Business Login tokens (1h) need the exchange.
+      // Dashboard tokens are already long-lived; 1h tokens need the exchange (requires META_IG_APP_SECRET).
       let expiresAt = new Date(Date.now() + 60 * 24 * 3600 * 1000);
-      if (process.env.META_IG_APP_SECRET) {
-        try {
-          const res = await exchangeInstagramToken(token);
-          token = res.access_token;
-          expiresAt = new Date(Date.now() + res.expires_in * 1000);
-          console.log(`✓ Long-lived Instagram token (~${Math.round(res.expires_in / 86400)} days)`);
-        } catch {
-          console.log('• Token already long-lived (exchange skipped)');
-        }
+      try {
+        const res = await exchangeInstagramToken(token);
+        token = res.access_token;
+        expiresAt = new Date(Date.now() + res.expires_in * 1000);
+      } catch {
+        console.log('• Exchange skipped (token already long-lived or META_IG_APP_SECRET missing)');
       }
-
-      const me = await getInstagramLoginProfile(token);
-      console.log(`• Instagram @${me.username} (${me.userId})`);
-      await upsertAccount(ws.id, 'instagram', me.userId, me.username, me.avatarUrl, token, {
-        scopes: ['instagram_business_basic', 'instagram_business_manage_comments'],
-        tokenExpiresAt: expiresAt
-      });
-      console.log('\nNext: `poll <social_account_id>` or run the worker.');
+      const acc = await connectInstagramAccount(ws.id, token, expiresAt);
+      console.log(`✓ instagram @${acc.username} → social_account ${acc.id}`);
       break;
     }
 
