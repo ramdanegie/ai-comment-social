@@ -17,7 +17,7 @@
     {@render children()}
   </main>
   <footer class="mx-auto max-w-3xl px-6 pb-10 text-xs text-slate-400">
-    © 2026 PT CREATIVE SHINE INNOVATION · Replyra · hello.infocreativeshine@gmail.com
+    © 2026 PT CREATIVE SHINE INNOVATION · Replyra · admin@creativeshine.id
   </footer>
 </div>
 

@@ -46,4 +46,4 @@
 <p>These terms are governed by the laws of the Republic of Indonesia.</p>
 
 <h2>9. Contact</h2>
-<p><a href="mailto:hello.infocreativeshine@gmail.com">hello.infocreativeshine@gmail.com</a></p>
+<p><a href="mailto:admin@creativeshine.id">admin@creativeshine.id</a></p>

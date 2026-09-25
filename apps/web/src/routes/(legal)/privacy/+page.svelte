@@ -67,5 +67,5 @@
 
 <h2>8. Contact</h2>
 <p>
-  PT CREATIVE SHINE INNOVATION — <a href="mailto:hello.infocreativeshine@gmail.com">hello.infocreativeshine@gmail.com</a>
+  PT CREATIVE SHINE INNOVATION — <a href="mailto:admin@creativeshine.id">admin@creativeshine.id</a>
 </p>

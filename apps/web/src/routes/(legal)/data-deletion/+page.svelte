@@ -26,7 +26,7 @@
 
 <h2>Option 3 — Email request</h2>
 <p>
-  Email <a href="mailto:hello.infocreativeshine@gmail.com">hello.infocreativeshine@gmail.com</a> with the subject
+  Email <a href="mailto:admin@creativeshine.id">admin@creativeshine.id</a> with the subject
   <strong>"Replyra Data Deletion Request"</strong> and the Instagram username or Facebook Page involved. We verify the
   request, delete your data within <strong>30 days</strong>, and email you a confirmation.
 </p>
