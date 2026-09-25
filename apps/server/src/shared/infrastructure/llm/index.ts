@@ -13,7 +13,7 @@ import { createOpenAICompatProvider } from './openaiCompatProvider';
 
 const DEFAULT_MODEL: Record<string, string | undefined> = {
   anthropic: 'claude-haiku-4-5',
-  gemini: 'gemini-3.1-flash-lite',
+  gemini: 'gemini-3.5-flash-lite', // ~1.2s per call from the hosting server vs 4–9s on 3.1-flash-lite
   deepseek: 'deepseek-chat',
   openai: undefined // model names change often — set LLM_MODEL_CLASSIFY / LLM_MODEL_REPLY explicitly
 };
