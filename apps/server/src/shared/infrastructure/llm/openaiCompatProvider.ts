@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import type { ClassifyInput, DraftReplyInput, LlmProvider } from '../../../contexts/moderation/domain/LlmPorts';
 import { CLASSIFY_SYSTEM, ClassificationSchema, REPLY_SYSTEM, classifyUserMessage, cleanReply, replyUserMessage } from './prompts';
+import { LLM_TIMEOUT_MS } from './config';
 
 type Flavor = 'openai' | 'gemini' | 'deepseek';
 
@@ -23,7 +24,7 @@ export function createOpenAICompatProvider(opts: {
   const client = new OpenAI({
     apiKey: opts.apiKey,
     baseURL: BASE_URL[opts.flavor],
-    timeout: 30_000,
+    timeout: LLM_TIMEOUT_MS,
     maxRetries: 2
   });
   // Gemini 3.x thinks before answering; short classification/replies don't need it (latency).

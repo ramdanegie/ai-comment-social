@@ -5,6 +5,7 @@
 //   LLM_MODEL_CLASSIFY, LLM_MODEL_REPLY   (optional for anthropic/gemini/deepseek, required for openai)
 //   Note: on the Gemini free tier Google may use submitted content to improve its products.
 //   LLM_PRICE_INPUT_PER_MTOK, LLM_PRICE_OUTPUT_PER_MTOK  (USD, for usage metering; defaults per provider)
+//   LLM_TIMEOUT_MS  (per request, default 12000; the SDK retries twice on timeout)
 
 import type { LlmProvider, LlmUsage } from '../../../contexts/moderation/domain/LlmPorts';
 import { createAnthropicProvider } from './anthropicProvider';

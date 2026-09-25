@@ -5,9 +5,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import type { ClassifyInput, DraftReplyInput, LlmProvider } from '../../../contexts/moderation/domain/LlmPorts';
 import { CLASSIFY_SYSTEM, ClassificationSchema, REPLY_SYSTEM, classifyUserMessage, cleanReply, replyUserMessage } from './prompts';
+import { LLM_TIMEOUT_MS } from './config';
 
 export function createAnthropicProvider(opts: { apiKey: string; classifyModel: string; replyModel: string }): LlmProvider {
-  const client = new Anthropic({ apiKey: opts.apiKey, timeout: 30_000, maxRetries: 2 });
+  const client = new Anthropic({ apiKey: opts.apiKey, timeout: LLM_TIMEOUT_MS, maxRetries: 2 });
   const usage = (model: string, u: Anthropic.Usage) => ({
     provider: 'anthropic',
     model,
