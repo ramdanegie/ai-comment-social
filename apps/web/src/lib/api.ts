@@ -65,6 +65,25 @@ export const api = {
     return this.getMe();
   },
 
+  /** Starts Google OAuth; the API finishes at /api/v1/auth/social-done and returns to /login#token=… */
+  async googleSignInUrl(): Promise<string> {
+    const res = await fetch(`${API_BASE}/api/auth/sign-in/social`, {
+      method: 'POST',
+      credentials: 'include', // OAuth state cookie on the API domain
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: 'google', callbackURL: `${API_BASE}/api/v1/auth/social-done` })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.url) throw new Error(data.message || 'Login Google belum tersedia.');
+    return data.url;
+  },
+
+  /** Completes Google sign-in with the session token handed back in the URL fragment. */
+  async signInWithToken(token: string): Promise<Me> {
+    setToken(token);
+    return this.getMe();
+  },
+
   async signOut(): Promise<void> {
     await authFetch(`${API_BASE}/api/auth/sign-out`, { method: 'POST' }).catch(() => {});
   },

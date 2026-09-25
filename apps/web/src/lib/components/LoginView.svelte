@@ -47,18 +47,10 @@
     isGoogleLoading = true;
     errorMessage = null;
     try {
-      const authBase = api.authBaseUrl || 'http://localhost:3099';
-      const callbackURL = `${window.location.origin}/login`;
-      window.location.href = `${authBase}/api/auth/sign-in/social?provider=google&callbackURL=${encodeURIComponent(callbackURL)}`;
+      window.location.href = await api.googleSignInUrl();
     } catch (err: any) {
-      errorMessage = isLangEn
-        ? 'Google sign-in requires GOOGLE_CLIENT_ID configured on server.'
-        : 'Login Google memerlukan konfigurasi GOOGLE_CLIENT_ID & GOOGLE_CLIENT_SECRET di server.';
-      toast.info(errorMessage);
-    } finally {
-      setTimeout(() => {
-        isGoogleLoading = false;
-      }, 2000);
+      errorMessage = err.message;
+      isGoogleLoading = false;
     }
   }
 

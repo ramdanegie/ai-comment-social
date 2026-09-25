@@ -42,6 +42,18 @@
     }
   }
 
+  let googleBusy = $state(false);
+  async function google() {
+    if (!agree) return (error = 'Centang persetujuan Syarat Layanan & Kebijakan Privasi dulu.');
+    googleBusy = true;
+    try {
+      window.location.href = await api.googleSignInUrl(); // new Google users get their own trial workspace
+    } catch (err) {
+      error = (err as Error).message;
+      googleBusy = false;
+    }
+  }
+
   const field =
     'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 </script>
@@ -97,6 +109,16 @@
       >
         {#if busy}<Loader2 class="h-4 w-4 animate-spin" />{/if}
         Daftar & mulai trial
+      </button>
+
+      <button
+        type="button"
+        onclick={google}
+        disabled={googleBusy}
+        class="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+      >
+        {#if googleBusy}<Loader2 class="h-4 w-4 animate-spin" />{/if}
+        Daftar dengan Google
       </button>
 
       <p class="mt-4 text-center text-sm text-slate-500">

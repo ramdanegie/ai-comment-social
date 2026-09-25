@@ -15,6 +15,19 @@
   }
 
   onMount(async () => {
+    // Return from Google sign-in: /login#token=… (fragment is never sent to a server)
+    const token = new URLSearchParams(window.location.hash.slice(1)).get('token');
+    if (token) {
+      history.replaceState(null, '', window.location.pathname);
+      try {
+        return handleLogin(await api.signInWithToken(token));
+      } catch {
+        toast.error('Login Google gagal. Coba lagi.');
+      }
+    }
+    if (page.url.searchParams.get('error') === 'google') {
+      toast.error(session.isLangEn ? 'Google sign-in failed.' : 'Login Google gagal. Coba lagi.');
+    }
     if (page.url.searchParams.get('action') === 'logout') {
       await api.signOut();
       signOut();

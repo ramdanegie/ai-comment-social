@@ -96,4 +96,26 @@ export async function registerTenant(args: { name: string; email: string; passwo
   return { user, workspace };
 }
 
+/** Social sign-up: a user with no workspace yet gets their own (owner, trial). */
+export async function ensureTenantWorkspace(user: { id: string; name: string; email: string }) {
+  const existing = await db.query.memberships.findFirst({ where: eq(schema.memberships.userId, user.id) });
+  if (existing) return null;
+  const brand = user.name?.trim() || user.email.split('@')[0];
+  const [workspace] = await db
+    .insert(schema.workspaces)
+    .values({ name: brand, slug: await uniqueWorkspaceSlug(brand) })
+    .returning();
+  await addMembership(workspace.id, user.id, 'owner');
+  await startTrial(workspace.id);
+  await db.insert(schema.auditLogs).values({
+    workspaceId: workspace.id,
+    actor: user.id,
+    action: 'auth.registered',
+    targetType: 'workspace',
+    targetId: workspace.id,
+    meta: { email: user.email, via: 'google' }
+  });
+  return workspace;
+}
+
 export class RegistrationError extends Error {}

@@ -17,7 +17,8 @@ const PUBLIC = [
   /^\/webhooks\//,
   /^\/api\/v1\/plans$/,
   /^\/api\/v1\/pricing$/,
-  /^\/api\/v1\/register$/
+  /^\/api\/v1\/register$/,
+  /^\/api\/v1\/auth\/social-done$/
 ];
 
 /** Minimum role per workspace route; first match wins. Default: GET → viewer, writes → admin. */

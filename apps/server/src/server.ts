@@ -22,7 +22,7 @@ import {
   syncPayment,
   verifyMidtransSignature as verifyBillingSignature
 } from './contexts/billing/application/Billing';
-import { RegistrationError, registerTenant } from './contexts/identity/application/Accounts';
+import { RegistrationError, ensureTenantWorkspace, registerTenant } from './contexts/identity/application/Accounts';
 import { adminRoutes } from './contexts/billing/presentation/adminRoutes';
 import { auth } from './shared/infrastructure/auth';
 import { authGuard } from './shared/http/authGuard';
@@ -115,6 +115,17 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
       })
     }
   )
+
+  // Google sign-in lands here (Better Auth callbackURL, same origin → session cookie present).
+  // First-time Google users become tenant owners on a trial; the session token is handed to the
+  // web app in the URL fragment (never sent to a server) because the web app uses bearer auth.
+  .get('/api/v1/auth/social-done', async ({ request, redirect }) => {
+    const s = await auth.api.getSession({ headers: request.headers });
+    if (!s) return redirect(`${WEB_URL}/login?error=google`);
+    const user = s.user as typeof s.user & { isSuperadmin?: boolean };
+    if (!user.isSuperadmin) await ensureTenantWorkspace(user);
+    return redirect(`${WEB_URL}/login#token=${encodeURIComponent(s.session.token)}`);
+  })
 
   // Signed-in user + their workspaces/roles (replaces the old demo login endpoints)
   .get('/api/v1/me', async ({ session }) => {

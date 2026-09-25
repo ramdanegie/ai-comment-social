@@ -51,6 +51,10 @@ export const auth = betterAuth({
         }
       : {})
   },
+  account: {
+    // Google verifies email ownership, so signing in with Google links to an existing email account.
+    accountLinking: { enabled: true, trustedProviders: ['google'] }
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 30, // 30 days
     updateAge: 60 * 60 * 24 // refresh daily
