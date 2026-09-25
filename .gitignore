@@ -44,3 +44,6 @@ vite.config.js.timestamp-*
 .env*.local
 .playwright-mcp/
 
+apps/server/release/
+apps/server/.env.deploy
+apps/server/.env.hosting

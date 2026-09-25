@@ -22,7 +22,9 @@
   import LogoutModal from '$lib/components/LogoutModal.svelte';
   import { toast } from '$lib/toast';
   import { PAGES, LOGIN_PATH, pageIdFromPath, pathFor, type PageId } from '$lib/nav';
-  import { session, signOut, refreshReviewCount } from '$lib/session.svelte';
+  import { api } from '$lib/api';
+  import { setUnauthorizedHandler } from '$lib/authToken';
+  import { session, signOut, refreshMe, refreshReviewCount, selectWorkspace } from '$lib/session.svelte';
 
   let { children } = $props();
 
@@ -43,7 +45,21 @@
     settings: Settings
   };
 
-  onMount(refreshReviewCount);
+  onMount(() => {
+    // Session expired or revoked server-side → back to login, then return here.
+    setUnauthorizedHandler(() => {
+      signOut();
+      goto(`${LOGIN_PATH}?redirect=${encodeURIComponent(page.url.pathname + page.url.search)}`, { replaceState: true });
+    });
+    // Re-validate the stored session and pick up role/membership changes.
+    refreshMe().catch(() => {});
+    refreshReviewCount();
+  });
+
+  // Workspace switcher (Navbar) → keep role + persisted choice in sync.
+  $effect(() => {
+    if (session.workspace) selectWorkspace(session.workspace);
+  });
 
   // Close the mobile drawer and refresh the queue badge on every navigation.
   afterNavigate(() => {
@@ -77,8 +93,9 @@
 
   const navigate = (id: string) => goto(pathFor(id));
 
-  function handleLogoutSuccess() {
+  async function handleLogoutSuccess() {
     isLogoutModalOpen = false;
+    await api.signOut(); // revoke the server session, not just the local token
     signOut();
     toast.info(
       session.isLangEn ? 'Signed out of Replyra.' : 'Berhasil keluar dari akun Replyra.',
@@ -96,7 +113,7 @@
   <a href="#main-content" class="skip-link">{session.isLangEn ? 'Skip to content' : 'Langsung ke konten'}</a>
   <Navbar
     bind:activeWorkspace={session.workspace}
-    bind:currentRole={session.role}
+    currentRole={session.role}
     bind:isDarkMode={session.isDarkMode}
     bind:isLangEn={session.isLangEn}
     pendingReviewCount={session.pendingReviewCount}
@@ -118,7 +135,15 @@
 
     <main id="main-content" tabindex="-1" class="app-content min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
       <div class="mx-auto max-w-7xl">
-        {@render children()}
+        {#if session.workspace}
+          {@render children()}
+        {:else if session.isAuthenticated}
+          <div class="mx-auto mt-16 max-w-md rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
+            {session.isLangEn
+              ? 'Your account is not a member of any workspace yet. Ask the workspace owner to invite you.'
+              : 'Akun Anda belum tergabung di workspace mana pun. Minta owner workspace untuk mengundang Anda.'}
+          </div>
+        {/if}
       </div>
     </main>
   </div>

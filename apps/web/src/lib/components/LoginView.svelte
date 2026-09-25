@@ -19,102 +19,45 @@
     MessageCircle
   } from 'lucide-svelte';
   import InstagramIcon from './icons/InstagramIcon.svelte';
-  import { api } from '../api';
-  import type { UserRole } from '../types';
+  import { api, type Me } from '../api';
   import { toast } from '$lib/toast';
 
   let {
     isLangEn = false,
     isDarkMode = false,
-    onLogin = (_role: UserRole, _user?: any) => {},
+    onLogin = (_me: Me) => {},
     onToggleTheme = () => {},
     onToggleLang = () => {}
   }: {
     isLangEn?: boolean;
     isDarkMode?: boolean;
-    onLogin?: (role: UserRole, user?: any) => void;
+    onLogin?: (me: Me) => void;
     onToggleTheme?: () => void;
     onToggleLang?: () => void;
   } = $props();
 
-  let dbUsers: Array<{ id: string; name: string; email: string; role?: UserRole }> = $state([]);
-  let email: string = $state('budi@maujahit.id');
-  let password: string = $state('••••••••••••');
-  let selectedDemoRole: UserRole = $state('owner');
-  let isLoading: boolean = $state(false);
-  let isGoogleLoading: boolean = $state(false);
-  let showGooglePicker: boolean = $state(false);
-
-  const googleAccounts = [
-    {
-      name: 'Budi Santoso',
-      email: 'budi.santoso@gmail.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop'
-    },
-    {
-      name: 'MauJahit Official',
-      email: 'maujahit.id@gmail.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=120&h=120&fit=crop'
-    }
-  ];
-
-  onMount(async () => {
-    try {
-      const users = await api.getUsers();
-      const unique = Array.from(new Map(users.map((u) => [u.email, u])).values());
-      dbUsers = unique;
-      if (unique.length > 0) {
-        email = unique[0].email;
-        selectedDemoRole = unique[0].role || 'owner';
-      }
-    } catch {}
-  });
+  let email = $state('');
+  let password = $state('');
+  let isLoading = $state(false);
+  let errorMessage = $state<string | null>(null);
 
   async function handleSubmit(e?: SubmitEvent) {
-    if (e) e.preventDefault();
+    e?.preventDefault();
+    if (isLoading) return;
     isLoading = true;
+    errorMessage = null;
     try {
-      const res = await api.login(email, password);
-      onLogin(res.role, res.user);
+      const me = await api.signIn(email.trim().toLowerCase(), password);
+      if (me.workspaces.length === 0) {
+        toast.warning(
+          isLangEn ? 'Your account is not a member of any workspace yet.' : 'Akun Anda belum tergabung di workspace mana pun.'
+        );
+      }
+      onLogin(me);
     } catch (err: any) {
-      toast.error(err.message || 'Login gagal', isLangEn ? 'Authentication Failed' : 'Autentikasi Gagal');
+      errorMessage = err.message || 'Login gagal';
     } finally {
       isLoading = false;
-    }
-  }
-
-  async function handleQuickLogin(user: { id: string; name: string; email: string; role?: UserRole }) {
-    email = user.email;
-    selectedDemoRole = user.role || 'viewer';
-    isLoading = true;
-    try {
-      const res = await api.login(user.email);
-      onLogin(res.role, res.user);
-    } catch (err: any) {
-      toast.error(err.message || 'Login gagal', isLangEn ? 'Authentication Failed' : 'Autentikasi Gagal');
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  async function handleSelectGoogleAccount(account: { name: string; email: string; avatarUrl?: string }) {
-    showGooglePicker = false;
-    isGoogleLoading = true;
-    try {
-      const res = await api.loginWithGoogle({
-        email: account.email,
-        name: account.name,
-        avatarUrl: account.avatarUrl
-      });
-      toast.success(
-        isLangEn ? `Signed in with Google as ${account.name}` : `Berhasil masuk dengan Google (${account.email})`,
-        'Google Sign-In'
-      );
-      onLogin(res.role, res.user);
-    } catch (err: any) {
-      toast.error(err.message || 'Google Sign-In gagal', 'Error');
-    } finally {
-      isGoogleLoading = false;
     }
   }
 </script>
@@ -175,95 +118,288 @@
           : 'Balas otomatis minat beli calon pelanggan Instagram & Facebook, serta bersihkan komentar spam secara otomatis.'}
       </p>
 
-      <!-- Dynamic Floating Illustration Stage -->
-      <div class="relative mt-8 hidden h-96 w-full max-w-xl lg:block">
-        <!-- Connecting Circuit / Flow Lines (SVG Backing) -->
-        <svg class="absolute inset-0 h-full w-full pointer-events-none opacity-40 dark:opacity-30" viewBox="0 0 500 380">
-          <path d="M 120 70 C 220 70, 260 160, 360 160" fill="none" stroke="#007aff" stroke-width="2" stroke-dasharray="6,6" class="animate-pulse" />
-          <path d="M 360 160 C 420 160, 420 280, 220 310" fill="none" stroke="#4285F4" stroke-width="2" stroke-dasharray="6,6" />
-          <path d="M 80 260 C 140 260, 180 180, 360 160" fill="none" stroke="#34A853" stroke-width="1.5" stroke-dasharray="4,4" />
+      <!-- Dynamic Animated Isometric Blueprint Stage (Inspired by ngodingpakeai.com) -->
+      <div class="iso-stage relative mt-6 hidden w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/70 p-2 shadow-xl backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/60 lg:block">
+        <svg
+          viewBox="0 0 680 405"
+          class="h-auto w-full select-none"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <!-- Blueprint Dotted Grid -->
+          <g stroke-opacity="0.14" stroke-width="1.5" stroke-dasharray="2 8">
+            <!-- Vertical Grid Lines -->
+            <line x1="20" y1="0" x2="20" y2="405" />
+            <line x1="60" y1="0" x2="60" y2="405" />
+            <line x1="100" y1="0" x2="100" y2="405" />
+            <line x1="140" y1="0" x2="140" y2="405" />
+            <line x1="180" y1="0" x2="180" y2="405" />
+            <line x1="220" y1="0" x2="220" y2="405" />
+            <line x1="260" y1="0" x2="260" y2="405" />
+            <line x1="300" y1="0" x2="300" y2="405" />
+            <line x1="340" y1="0" x2="340" y2="405" />
+            <line x1="380" y1="0" x2="380" y2="405" />
+            <line x1="420" y1="0" x2="420" y2="405" />
+            <line x1="460" y1="0" x2="460" y2="405" />
+            <line x1="500" y1="0" x2="500" y2="405" />
+            <line x1="540" y1="0" x2="540" y2="405" />
+            <line x1="580" y1="0" x2="580" y2="405" />
+            <line x1="620" y1="0" x2="620" y2="405" />
+            <line x1="660" y1="0" x2="660" y2="405" />
+
+            <!-- Horizontal Grid Lines -->
+            <line x1="0" y1="20" x2="680" y2="20" />
+            <line x1="0" y1="50" x2="680" y2="50" />
+            <line x1="0" y1="80" x2="680" y2="80" />
+            <line x1="0" y1="110" x2="680" y2="110" />
+            <line x1="0" y1="140" x2="680" y2="140" />
+            <line x1="0" y1="170" x2="680" y2="170" />
+            <line x1="0" y1="200" x2="680" y2="200" />
+            <line x1="0" y1="230" x2="680" y2="230" />
+            <line x1="0" y1="260" x2="680" y2="260" />
+            <line x1="0" y1="290" x2="680" y2="290" />
+            <line x1="0" y1="320" x2="680" y2="320" />
+            <line x1="0" y1="350" x2="680" y2="350" />
+            <line x1="0" y1="380" x2="680" y2="380" />
+          </g>
+
+          <!-- Interconnecting Traces / Flow Lines -->
+          <g stroke-opacity="0.4" stroke-width="2">
+            <!-- Trace 1: From Inbound Comment to AI Engine Core -->
+            <path d="M 265 95 C 295 95, 305 115, 325 115" stroke="#ea4335" stroke-dasharray="4 4" />
+            
+            <!-- Trace 2: From AI Engine Core to Auto-Reply Station -->
+            <path d="M 365 115 C 385 115, 395 115, 415 115" stroke="#10b981" stroke-dasharray="4 4" />
+
+            <!-- Trace 3: From AI Engine Core down to Spam Shield -->
+            <path d="M 345 155 L 345 195 C 345 220, 310 220, 275 220" stroke="#f59e0b" stroke-dasharray="4 4" />
+          </g>
+
+          <!-- Animated Flow Chevrons (Circuit Signals) -->
+          <g transform="translate(275 95)">
+            <g class="sc-flow" style="animation-delay: 0s">
+              <path d="M -5 -5 L 3 0 L -5 5" stroke="#ea4335" stroke-width="2.5" fill="none" />
+            </g>
+          </g>
+          <g transform="translate(295 105)">
+            <g class="sc-flow" style="animation-delay: 0.3s">
+              <path d="M -5 -5 L 3 0 L -5 5" stroke="#ea4335" stroke-width="2.5" fill="none" />
+            </g>
+          </g>
+          <g transform="translate(378 115)">
+            <g class="sc-flow" style="animation-delay: 0.15s">
+              <path d="M -5 -5 L 3 0 L -5 5" stroke="#10b981" stroke-width="2.5" fill="none" />
+            </g>
+          </g>
+          <g transform="translate(398 115)">
+            <g class="sc-flow" style="animation-delay: 0.45s">
+              <path d="M -5 -5 L 3 0 L -5 5" stroke="#10b981" stroke-width="2.5" fill="none" />
+            </g>
+          </g>
+          <g transform="translate(330 220)">
+            <g class="sc-flow" style="animation-delay: 0.25s">
+              <path d="M 5 -5 L -3 0 L 5 5" stroke="#f59e0b" stroke-width="2.5" fill="none" />
+            </g>
+          </g>
+
+          <!-- Panel 1: Inbound Social Comment (Top Left) -->
+          <g class="iso-card-1">
+            <rect x="20" y="25" width="245" height="142" rx="14" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.35" stroke-width="2" />
+            
+            <!-- Blueprint Corner Registration Marks -->
+            <rect x="16" y="21" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+            <rect x="261" y="21" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+            <rect x="16" y="163" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+            <rect x="261" y="163" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+
+            <!-- Avatar & User Info -->
+            <circle cx="45" cy="50" r="14" fill="#ea4335" fill-opacity="0.15" stroke="#ea4335" stroke-width="2" />
+            <rect x="39" y="44" width="12" height="12" rx="3.5" stroke="#ea4335" stroke-width="1.6" fill="none" />
+            <circle cx="45" cy="50" r="2.5" stroke="#ea4335" stroke-width="1.4" fill="none" />
+
+            <text x="68" y="47" font-size="12" font-weight="700" fill="currentColor" fill-opacity="0.9" stroke="none">anisa_wardani</text>
+            <text x="68" y="60" font-size="9" font-weight="500" fill="currentColor" fill-opacity="0.45" stroke="none">Instagram Comment • Baru saja</text>
+
+            <!-- Intent Badge -->
+            <rect x="180" y="40" width="75" height="19" rx="9.5" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.5" />
+            <text x="217" y="53" font-size="9" font-weight="700" fill="#10b981" stroke="none" text-anchor="middle">Minat Beli</text>
+
+            <!-- Card Internal Divider -->
+            <line x1="32" y1="72" x2="253" y2="72" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+
+            <!-- Customer Text -->
+            <text x="34" y="94" font-size="11" font-weight="600" fill="currentColor" fill-opacity="0.88" stroke="none">
+              "Bisa custom ukuran jumbo?"
+            </text>
+
+            <!-- Wireframe Text Strokes -->
+            <line x1="34" y1="112" x2="225" y2="112" stroke-width="4" stroke-opacity="0.35" stroke="currentColor" class="sc-pulse-line" />
+            <line x1="34" y1="124" x2="165" y2="124" stroke-width="4" stroke-opacity="0.25" stroke="currentColor" />
+
+            <!-- AI Confidence Pill -->
+            <circle cx="42" cy="148" r="4" fill="#f59e0b" stroke="none" />
+            <text x="52" y="151" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.65" stroke="none">AI Confidence: 98% (High Intent)</text>
+          </g>
+
+          <!-- Central AI Brain Core Node -->
+          <g>
+            <!-- Expanding Radar Pulse Rings (Continuous radiating) -->
+            <circle cx="345" cy="115" r="22" stroke="#ea4335" stroke-width="2" fill="none" class="sc-ripple" />
+            <circle cx="345" cy="115" r="22" stroke="#ea4335" stroke-width="2" fill="none" class="sc-ripple" style="animation-delay: 1.5s" />
+            
+            <!-- Core Housing -->
+            <g class="sc-core-pulse">
+              <rect x="323" y="93" width="44" height="44" rx="12" fill="currentColor" fill-opacity="0.08" stroke="#ea4335" stroke-width="2.5" />
+              <!-- Sparkle / Brain Icon Inside -->
+              <path d="M 345 101 L 347 111 L 357 113 L 347 115 L 345 125 L 343 115 L 333 113 L 343 111 Z" fill="#ea4335" stroke="none" />
+            </g>
+
+            <!-- Processing Speed Indicator -->
+            <rect x="310" y="145" width="70" height="20" rx="10" fill="#ea4335" fill-opacity="0.12" stroke="#ea4335" stroke-width="1.5" />
+            <text x="345" y="158" font-size="9" font-weight="700" fill="#ea4335" stroke="none" text-anchor="middle">⚡ AI 0.8s</text>
+          </g>
+
+          <!-- Spam Shield Filter Branch Node (Middle Left) -->
+          <g class="iso-card-3">
+            <rect x="135" y="196" width="168" height="52" rx="12" fill="currentColor" fill-opacity="0.05" stroke="#10b981" stroke-opacity="0.55" stroke-width="1.8" />
+            
+            <!-- Shield Icon -->
+            <g transform="translate(145 208)">
+              <path d="M 12 2 L 2 6 V 14 C 2 20 12 24 12 24 C 12 24 22 20 22 14 V 6 Z" stroke="#10b981" stroke-width="2" fill="#10b981" fill-opacity="0.15" />
+              <path d="M 8 13 L 11 16 L 16 10" stroke="#10b981" stroke-width="2" fill="none" />
+            </g>
+
+            <text x="178" y="217" font-size="11" font-weight="700" fill="currentColor" fill-opacity="0.9" stroke="none">Spam Shield</text>
+            <text x="178" y="233" font-size="8.5" font-weight="500" fill="#10b981" stroke="none">Auto-hide judi & scam</text>
+            
+            <!-- Blinking Status Dot -->
+            <circle cx="286" cy="222" r="3.5" fill="#10b981" stroke="none" class="sc-blink" />
+          </g>
+
+          <!-- Panel 2: AI Auto-Reply & Meta Dispatch Station (Right) -->
+          <g class="iso-card-2">
+            <rect x="415" y="25" width="245" height="248" rx="14" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.4" stroke-width="2" />
+
+            <!-- Blueprint Corner Marks -->
+            <rect x="411" y="21" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+            <rect x="656" y="21" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+            <rect x="411" y="269" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+            <rect x="656" y="269" width="8" height="8" fill="currentColor" stroke="none" opacity="0.4" />
+
+            <!-- Header: Bot Identity & Verification -->
+            <rect x="428" y="38" width="26" height="26" rx="8" fill="#ea4335" stroke="none" />
+            <circle cx="437" cy="50" r="1.5" fill="white" stroke="none" />
+            <circle cx="445" cy="50" r="1.5" fill="white" stroke="none" />
+            <path d="M 437 55 Q 441 58 445 55" stroke="white" stroke-width="1.2" fill="none" />
+
+            <text x="462" y="47" font-size="12" font-weight="700" fill="currentColor" fill-opacity="0.9" stroke="none">Replyra AI Agent</text>
+            <circle cx="466" cy="58" r="3" fill="#10b981" stroke="none" />
+            <text x="474" y="61" font-size="8.5" font-weight="600" fill="#10b981" stroke="none">Auto-Reply Aktif</text>
+
+            <!-- Meta Verified Badge -->
+            <rect x="575" y="40" width="73" height="19" rx="5" fill="currentColor" fill-opacity="0.08" stroke="currentColor" stroke-opacity="0.3" stroke-width="1" />
+            <text x="611" y="52" font-size="8" font-weight="600" fill="currentColor" fill-opacity="0.7" stroke="none" text-anchor="middle">Meta Verified</text>
+
+            <!-- Header Divider -->
+            <line x1="427" y1="72" x2="648" y2="72" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+
+            <!-- Typewriter Auto-Reply Text Container -->
+            <rect x="427" y="82" width="221" height="80" rx="8" fill="currentColor" fill-opacity="0.06" stroke="currentColor" stroke-opacity="0.25" stroke-width="1.5" />
+
+            <defs>
+              <clipPath id="sc-type-clip-1">
+                <rect x="436" y="90" width="202" height="18" class="sc-type-line-1" />
+              </clipPath>
+              <clipPath id="sc-type-clip-2">
+                <rect x="436" y="110" width="202" height="18" class="sc-type-line-2" />
+              </clipPath>
+              <clipPath id="sc-type-clip-3">
+                <rect x="436" y="130" width="202" height="18" class="sc-type-line-3" />
+              </clipPath>
+            </defs>
+
+            <!-- Simulated Typing Sentences -->
+            <text x="437" y="103" font-size="9.5" font-family="monospace" font-weight="500" fill="currentColor" fill-opacity="0.9" stroke="none" clip-path="url(#sc-type-clip-1)">
+              Halo kak Anisa! Bisa banget custom
+            </text>
+            <text x="437" y="122" font-size="9.5" font-family="monospace" font-weight="500" fill="currentColor" fill-opacity="0.9" stroke="none" clip-path="url(#sc-type-clip-2)">
+              ukuran jumbo. Ready 5-7 hari kerja.
+            </text>
+            <text x="437" y="141" font-size="9.5" font-family="monospace" font-weight="500" fill="currentColor" fill-opacity="0.9" stroke="none" clip-path="url(#sc-type-clip-3)">
+              Silakan cek DM untuk detailnya ya kak!
+            </text>
+            <!-- Blinking typing cursor moving with sc-caret -->
+            <g class="sc-caret-track">
+              <line x1="436" y1="134" x2="436" y2="148" stroke="#ea4335" stroke-width="2" class="sc-blink" />
+            </g>
+
+            <!-- Rule Compliance Verification Indicators -->
+            <g class="sc-pop-badge-1" transform="translate(432 174)">
+              <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1.5" />
+              <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
+              <text x="20" y="11" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.8" stroke="none">Tone: Ramah & Santun</text>
+            </g>
+
+            <g class="sc-pop-badge-2" transform="translate(432 196)">
+              <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1.5" />
+              <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
+              <text x="20" y="11" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.8" stroke="none">Katalog & Stok: Sinkron</text>
+            </g>
+
+            <g class="sc-pop-badge-3" transform="translate(432 218)">
+              <circle cx="8" cy="8" r="6" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1.5" />
+              <path d="M 5 8 L 7 10 L 11 6" stroke="#10b981" stroke-width="1.8" fill="none" />
+              <text x="20" y="11" font-size="9" font-weight="600" fill="currentColor" fill-opacity="0.8" stroke="none">Anti-Hallucination: Aman</text>
+            </g>
+
+            <!-- Final Sent Badge -->
+            <g class="sc-pop-sent">
+              <rect x="427" y="244" width="221" height="20" rx="6" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.5" />
+              <text x="537" y="257" font-size="9" font-weight="700" fill="#10b981" stroke="none" text-anchor="middle">✓ Balasan Terkirim Otomatis (0.8s)</text>
+            </g>
+          </g>
+
+          <!-- Bottom Real-Time Performance Matrix -->
+          <g>
+            <rect x="20" y="280" width="375" height="102" rx="14" fill="currentColor" fill-opacity="0.05" stroke="currentColor" stroke-opacity="0.3" stroke-width="1.8" />
+            
+            <!-- Header row of the banner -->
+            <circle cx="42" cy="303" r="11" fill="#ea4335" fill-opacity="0.15" stroke="#ea4335" stroke-width="1.5" />
+            <path d="M 38 303 L 41 306 L 46 300" stroke="#ea4335" stroke-width="2" fill="none" />
+            <text x="60" y="302" font-size="11" font-weight="800" fill="currentColor" stroke="none">24/7 Autopilot Engine</text>
+            <text x="60" y="314" font-size="8.5" font-weight="500" fill="currentColor" fill-opacity="0.5" stroke="none">Real-time social engagement & revenue shield</text>
+
+            <!-- Equalizer Activity Soundbars (Bouncing animated) -->
+            <g transform="translate(355 303)">
+              <line x1="-8" y1="-8" x2="-8" y2="8" stroke="#ea4335" stroke-width="2.5" class="sc-bar" style="animation-delay: 0s" />
+              <line x1="-2" y1="-8" x2="-2" y2="8" stroke="#ea4335" stroke-width="2.5" class="sc-bar" style="animation-delay: 0.2s" />
+              <line x1="4" y1="-8" x2="4" y2="8" stroke="#ea4335" stroke-width="2.5" class="sc-bar" style="animation-delay: 0.4s" />
+              <line x1="10" y1="-8" x2="10" y2="8" stroke="#ea4335" stroke-width="2.5" class="sc-bar" style="animation-delay: 0.15s" />
+            </g>
+
+            <!-- Divider -->
+            <line x1="32" y1="326" x2="383" y2="326" stroke="currentColor" stroke-opacity="0.15" stroke-width="1" />
+
+            <!-- 3 Metrics Grid Columns -->
+            <g transform="translate(35 342)">
+              <text x="0" y="10" font-size="14" font-weight="800" fill="#10b981" stroke="none">99.8%</text>
+              <text x="0" y="25" font-size="8.5" font-weight="600" fill="currentColor" fill-opacity="0.5" stroke="none">Response Rate</text>
+            </g>
+
+            <g transform="translate(160 342)">
+              <text x="0" y="10" font-size="14" font-weight="800" fill="currentColor" stroke="none">0.8 detik</text>
+              <text x="0" y="25" font-size="8.5" font-weight="600" fill="currentColor" fill-opacity="0.5" stroke="none">Rata-rata Respon</text>
+            </g>
+
+            <g transform="translate(285 342)">
+              <text x="0" y="10" font-size="14" font-weight="800" fill="#ea4335" stroke="none">+3.8x</text>
+              <text x="0" y="25" font-size="8.5" font-weight="600" fill="currentColor" fill-opacity="0.5" stroke="none">Konversi Penjualan</text>
+            </g>
+          </g>
         </svg>
-
-        <!-- Floating Card 1: Incoming Customer Comment (Instagram) -->
-        <div class="absolute left-0 top-2 w-72 sm:w-80 rounded-2xl border border-slate-200/90 bg-white/95 p-3.5 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 animate-float-slow">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-white shadow-xs">
-                <InstagramIcon class="h-4 w-4" />
-              </div>
-              <div>
-                <p class="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">anisa_wardani</p>
-                <p class="text-[10px] text-slate-400 leading-none">Instagram Comment • Baru saja</p>
-              </div>
-            </div>
-            <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              Purchase Intent
-            </span>
-          </div>
-          <p class="mt-2.5 text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-            "Bagus banget kebaya ungunya! Bisa custom ukuran jumbo nggak kak? Estimasi berapa lama?"
-          </p>
-          <div class="mt-2 flex items-center gap-1.5 text-[10px] text-slate-400">
-            <Sparkles class="h-3 w-3 text-amber-500" />
-            <span>AI Confidence: <strong class="text-slate-700 dark:text-slate-300 font-semibold">98%</strong></span>
-          </div>
-        </div>
-
-        <!-- Floating Card 2: AI Generating Auto-Reply in Motion -->
-        <div class="soft-card absolute right-0 top-36 w-80 sm:w-88 p-4 border-brand-500/30 shadow-2xl animate-float-reverse">
-          <div class="flex items-center justify-between pb-2 border-b border-slate-100/60 dark:border-slate-800/60">
-            <div class="flex items-center gap-2">
-              <div class="flex h-7 w-7 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm shadow-brand-500/30">
-                <Bot class="h-4 w-4" />
-              </div>
-              <div>
-                <p class="text-xs font-bold text-slate-900 dark:text-white leading-tight">Replyra AI Agent</p>
-                <p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold leading-none flex items-center gap-1 mt-0.5">
-                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 "></span>
-                  Auto-Reply Siap Terkirim
-                </p>
-              </div>
-            </div>
-            <span class="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[9px] font-bold text-[#4285F4] dark:text-blue-400 border border-blue-500/20">
-              1.2s
-            </span>
-          </div>
-
-          <!-- Typing Simulation -->
-          <div class="mt-2.5 rounded-2xl bg-white/40 p-3 text-xs text-slate-700 dark:bg-white/5 dark:text-slate-200 leading-relaxed font-mono border border-white/60 dark:border-white/10">
-            Halo kak Anisa! Bisa banget custom ukuran jumbo. Pengerjaan 7-10 hari kerja. Silakan DM kami ya kak agar kami bantu ukurnya<span class="inline-block h-3.5 w-1.5 bg-brand-500 ml-0.5 align-middle animate-typing-cursor"></span>
-          </div>
-
-          <div class="mt-2.5 flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400">
-            <span class="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
-              <Check class="h-3.5 w-3.5" /> Sesuai Aturan Brand
-            </span>
-            <span class="font-medium text-slate-400">Meta API Verified</span>
-          </div>
-        </div>
-
-        <!-- Floating Card 3: Spam Shield Indicator (Bottom Left) -->
-        <div class="soft-card absolute left-6 bottom-4 flex items-center gap-3 px-4 py-2.5 shadow-lg animate-float-fast">
-          <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-            <ShieldCheck class="h-5 w-5" />
-          </div>
-          <div class="min-w-0">
-            <p class="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">Spam Shield Aktif</p>
-            <p class="text-[10px] text-slate-400 truncate">Judi & phising otomatis di-hide</p>
-          </div>
-          <span class="h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30"></span>
-        </div>
-
-        <!-- Floating Card 4: Metrics Badge (Bottom Right) -->
-        <div class="soft-card absolute right-4 bottom-2 hidden sm:flex items-center gap-2.5 px-3.5 py-2 shadow-lg animate-float-slow">
-          <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 text-[#4285F4] dark:text-blue-400">
-            <TrendingUp class="h-4 w-4" />
-          </div>
-          <div class="text-[11px] leading-tight">
-            <p class="font-bold text-slate-900 dark:text-white">10x Lebih Cepat</p>
-            <p class="text-[9px] text-slate-400">Respon &lt; 6 menit</p>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -280,64 +416,24 @@
               Masuk ke Replyra
             </h2>
             <p class="text-xs text-slate-400 dark:text-slate-500">
-              Pilih cara masuk yang Anda inginkan
+              Masuk dengan email dan kata sandi
             </p>
           </div>
         </div>
 
-        <!-- Google One-Click SSO Primary Action -->
-        <div class="mt-6">
-          <button
-            type="button"
-            disabled={isLoading || isGoogleLoading}
-            class="glass-pill flex w-full items-center justify-center gap-3 py-3 px-4 text-xs font-bold text-slate-700 dark:text-slate-200 disabled:opacity-50"
-            onclick={() => (showGooglePicker = true)}
-          >
-            {#if isGoogleLoading}
-              <Loader2 class="h-4.5 w-4.5 animate-spin text-brand-500" />
-              <span>{isLangEn ? 'Connecting with Google...' : 'Menghubungkan ke Google...'}</span>
-            {:else}
-              <svg class="h-4.5 w-4.5 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              <span>{isLangEn ? 'Continue with Google' : 'Lanjutkan dengan Google'}</span>
-            {/if}
-          </button>
-        </div>
+        {#if import.meta.env.DEV}
+          <p class="mt-5 rounded-xl border border-dashed border-amber-300 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-300">
+            Dev: budi@maujahit.id (owner) · siti@ (admin) · dewi@ (viewer) — password lokal dari <code>scripts/users.ts</code>
+          </p>
+        {/if}
 
-        <!-- Clean Divider -->
-        <div class="relative my-5 flex items-center justify-center">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-slate-200/80 dark:border-slate-800"></div>
-          </div>
-          <span class="relative bg-white px-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-900">
-            {isLangEn ? 'or use account' : 'atau akun demo'}
-          </span>
-        </div>
-
-        <!-- Quick 1-Click Role Login Selector (from PostgreSQL Database) -->
-        {#if dbUsers.length > 0}
-          <div class="mb-5 space-y-1.5">
-            <div class="grid grid-cols-3 gap-2">
-              {#each dbUsers as u}
-                <button
-                  type="button"
-                  class="flex flex-col items-center justify-center rounded-xl border p-2 text-center transition-all {email === u.email
-                    ? 'border-brand-500 bg-brand-500/8 text-brand-700 dark:border-brand-500 dark:bg-brand-500/15 dark:text-brand-300 font-bold'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800'}"
-                  onclick={() => handleQuickLogin(u)}
-                >
-                  <span class="text-xs font-semibold capitalize">{u.role || 'User'}</span>
-                  <span class="text-[10px] text-slate-400 font-normal truncate max-w-full">{u.name}</span>
-                </button>
-              {/each}
-            </div>
+        {#if errorMessage}
+          <div class="mt-5 rounded-xl bg-rose-50 px-3 py-2.5 text-xs text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" role="alert">
+            {errorMessage}
           </div>
         {/if}
 
+        <div class="mt-5"></div>
         <!-- Standard Email/Password Form -->
         <form onsubmit={handleSubmit} class="space-y-3.5">
           <div>
@@ -350,6 +446,8 @@
                 id="loginEmail"
                 type="email"
                 bind:value={email}
+                autocomplete="username"
+                inputmode="email"
                 required
                 class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
               />
@@ -366,6 +464,7 @@
                 id="loginPassword"
                 type="password"
                 bind:value={password}
+                autocomplete="current-password"
                 required
                 class="h-9.5 w-full rounded-xl border border-slate-200 bg-slate-50/60 pl-9 pr-3 text-xs text-slate-900 transition focus:border-brand-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100"
               />
@@ -375,7 +474,7 @@
           <!-- Primary Login Submit Button -->
           <button
             type="submit"
-            disabled={isLoading || isGoogleLoading}
+            disabled={isLoading}
             class="btn-primary-glass mt-1 inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-xs font-bold text-white shadow-md disabled:opacity-50 active:scale-95"
           >
             {#if isLoading}
@@ -400,64 +499,186 @@
     </div>
   </div>
 
-  <!-- Google SSO Account Picker Modal -->
-  {#if showGooglePicker}
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-md"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="glass-panel w-full max-w-sm p-6 shadow-2xl">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div class="flex items-center gap-2.5">
-            <svg class="h-5 w-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-            </svg>
-            <span class="text-sm font-bold text-slate-900 dark:text-white">Pilih Akun Google</span>
-          </div>
-          <button
-            type="button"
-            class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800"
-            onclick={() => (showGooglePicker = false)}
-          >
-            <X class="h-4 w-4" />
-          </button>
-        </div>
-
-        <p class="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          Pilih akun Google untuk masuk ke workspace Replyra secara aman.
-        </p>
-
-        <div class="mt-4 space-y-2">
-          {#each googleAccounts as acc}
-            <button
-              type="button"
-              class="flex w-full items-center justify-between rounded-xl border border-slate-200/80 p-3 text-left transition hover:border-[#4285F4] hover:bg-blue-50/50 dark:border-slate-800 dark:hover:bg-blue-950/20"
-              onclick={() => handleSelectGoogleAccount(acc)}
-            >
-              <div class="flex items-center gap-3 min-w-0">
-                <img src={acc.avatarUrl} alt={acc.name} class="h-8 w-8 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700" />
-                <div class="min-w-0">
-                  <p class="truncate text-xs font-bold text-slate-900 dark:text-white">{acc.name}</p>
-                  <p class="truncate text-[11px] text-slate-400">{acc.email}</p>
-                </div>
-              </div>
-              <ArrowRight class="h-4 w-4 text-slate-400 shrink-0" />
-            </button>
-          {/each}
-        </div>
-
-        <button
-          type="button"
-          class="mt-4 w-full rounded-xl border border-dashed border-slate-300 py-2.5 text-center text-xs font-semibold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-          onclick={() => handleSelectGoogleAccount({ name: 'Google User', email: `user.${Date.now().toString(36)}@gmail.com` })}
-        >
-          + Gunakan Akun Google Lain
-        </button>
-      </div>
-    </div>
-  {/if}
 </div>
+
+<style>
+  .iso-stage svg * {
+    transform-box: fill-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .iso-stage svg * {
+      animation: none !important;
+    }
+  }
+
+  /* Gentle floating elevation for blueprint cards */
+  .iso-stage .iso-card-1 {
+    animation: iso-float-1 6s ease-in-out infinite;
+  }
+  @keyframes iso-float-1 {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .iso-stage .iso-card-2 {
+    animation: iso-float-2 7s ease-in-out infinite;
+  }
+  @keyframes iso-float-2 {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(4px); }
+  }
+
+  .iso-stage .iso-card-3 {
+    animation: iso-float-3 5.5s ease-in-out infinite;
+  }
+  @keyframes iso-float-3 {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+  }
+
+  /* Circuit Signal Chevrons Flow */
+  .iso-stage .sc-flow {
+    animation: sc-flow 1.4s ease-out infinite;
+  }
+  @keyframes sc-flow {
+    0% { transform: translateX(-12px); opacity: 0; }
+    30% { opacity: 0.95; }
+    100% { transform: translateX(14px); opacity: 0; }
+  }
+
+  /* Expanding Radar Ripple Rings from AI Brain Core */
+  .iso-stage .sc-ripple {
+    transform-origin: 50% 50%;
+    animation: sc-ripple 3s ease-out infinite;
+  }
+  @keyframes sc-ripple {
+    0% { transform: scale(0.7); opacity: 0.9; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+
+  /* AI Brain Heartbeat Pulse */
+  .iso-stage .sc-core-pulse {
+    transform-origin: 50% 50%;
+    animation: sc-core-pulse 3s ease-in-out infinite;
+  }
+  @keyframes sc-core-pulse {
+    0%, 100% { transform: scale(1); }
+    15% { transform: scale(1.08); }
+    25% { transform: scale(1); }
+  }
+
+  /* Typewriter Text Progression: 6s loop */
+  .iso-stage .sc-type-line-1 {
+    transform-origin: 0 50%;
+    animation: sc-type-1 6s steps(28, end) infinite;
+  }
+  @keyframes sc-type-1 {
+    0% { transform: scaleX(0); }
+    20%, 92% { transform: scaleX(1); }
+    98%, 100% { transform: scaleX(0); }
+  }
+
+  .iso-stage .sc-type-line-2 {
+    transform-origin: 0 50%;
+    animation: sc-type-2 6s steps(28, end) infinite;
+  }
+  @keyframes sc-type-2 {
+    0%, 20% { transform: scaleX(0); }
+    40%, 92% { transform: scaleX(1); }
+    98%, 100% { transform: scaleX(0); }
+  }
+
+  .iso-stage .sc-type-line-3 {
+    transform-origin: 0 50%;
+    animation: sc-type-3 6s steps(28, end) infinite;
+  }
+  @keyframes sc-type-3 {
+    0%, 40% { transform: scaleX(0); }
+    60%, 92% { transform: scaleX(1); }
+    98%, 100% { transform: scaleX(0); }
+  }
+
+  /* Caret track animation following the typing */
+  .iso-stage .sc-caret-track {
+    animation: sc-caret-track 6s steps(28, end) infinite;
+  }
+  @keyframes sc-caret-track {
+    0% { transform: translateX(0); opacity: 1; }
+    20% { transform: translateX(180px); opacity: 1; }
+    21% { transform: translateX(0); opacity: 1; }
+    40% { transform: translateX(170px); opacity: 1; }
+    41% { transform: translateX(0); opacity: 1; }
+    60%, 92% { transform: translateX(192px); opacity: 1; }
+    98%, 100% { transform: translateX(0); opacity: 0; }
+  }
+
+  /* Compliance Badges Popping in Sequence */
+  .iso-stage .sc-pop-badge-1 {
+    transform-origin: 50% 50%;
+    animation: sc-pop-b1 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  }
+  @keyframes sc-pop-b1 {
+    0%, 35% { transform: scale(0.6); opacity: 0.3; }
+    42%, 92% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.6); opacity: 0.3; }
+  }
+
+  .iso-stage .sc-pop-badge-2 {
+    transform-origin: 50% 50%;
+    animation: sc-pop-b2 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  }
+  @keyframes sc-pop-b2 {
+    0%, 48% { transform: scale(0.6); opacity: 0.3; }
+    55%, 92% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.6); opacity: 0.3; }
+  }
+
+  .iso-stage .sc-pop-badge-3 {
+    transform-origin: 50% 50%;
+    animation: sc-pop-badge-3 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  }
+  @keyframes sc-pop-badge-3 {
+    0%, 60% { transform: scale(0.6); opacity: 0.3; }
+    67%, 92% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.6); opacity: 0.3; }
+  }
+
+  /* Sent Confirmation Pill Pop */
+  .iso-stage .sc-pop-sent {
+    transform-origin: 50% 50%;
+    animation: sc-pop-sent 6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  }
+  @keyframes sc-pop-sent {
+    0%, 68% { transform: scale(0.9); opacity: 0.2; }
+    74%, 92% { transform: scale(1); opacity: 1; }
+    98%, 100% { transform: scale(0.9); opacity: 0.2; }
+  }
+
+  /* Blinking cursor and status dots */
+  .iso-stage .sc-blink {
+    animation: sc-blink 1s steps(1, end) infinite;
+  }
+  @keyframes sc-blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+
+  /* Soundbar Equalizer Bouncing */
+  .iso-stage .sc-bar {
+    transform-origin: 50% 50%;
+    animation: sc-bar 0.75s ease-in-out infinite alternate;
+  }
+  @keyframes sc-bar {
+    0% { transform: scaleY(0.2); }
+    100% { transform: scaleY(1); }
+  }
+
+  .iso-stage .sc-pulse-line {
+    animation: sc-pulse-line 3s ease-in-out infinite;
+  }
+  @keyframes sc-pulse-line {
+    0%, 100% { stroke-opacity: 0.35; }
+    50% { stroke-opacity: 0.7; }
+  }
+</style>

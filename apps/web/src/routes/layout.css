@@ -216,6 +216,9 @@ body {
   box-shadow: var(--glass-shadow);
   -webkit-backdrop-filter: blur(var(--glass-blur));
   backdrop-filter: blur(var(--glass-blur));
+}
+
+:where(.soft-card, .glass-chrome, .glass-panel) {
   position: relative;
 }
 

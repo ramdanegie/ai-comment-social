@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia';
+import { node } from '@elysiajs/node';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { db, schema } from '@replyra/db';
@@ -14,11 +15,35 @@ import {
   exchangeInstagramCode,
   verifyState
 } from './contexts/channel/application/ConnectInstagram';
+import { auth } from './shared/infrastructure/auth';
+import { authGuard } from './shared/http/authGuard';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3099;
 
-export const app = new Elysia()
-  .use(cors())
+const WEB_ORIGINS = (process.env.WEB_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+// Bun locally/VPS; Node on cPanel shared hosting (Passenger) — see src/node/*.
+export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } : {})
+  .use(
+    cors({
+      origin: WEB_ORIGINS,
+      credentials: true,
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      exposeHeaders: ['set-auth-token']
+    })
+  )
+  // Better Auth: /api/auth/sign-in/email, /sign-out, /get-session, ...
+  .all('/api/auth/*', ({ request, set }) => {
+    if (request.method !== 'GET' && request.method !== 'POST') {
+      set.status = 405;
+      return 'Method Not Allowed';
+    }
+    return auth.handler(request);
+  })
+  .use(authGuard)
   .use(
     swagger({
       documentation: {
@@ -38,161 +63,41 @@ export const app = new Elysia()
     runtime: 'bun'
   }))
 
-  // Current User Context from Database
-  .get('/api/v1/auth/me', async () => {
-    const user = await db.query.users.findFirst();
-    if (!user) throw new Error('No users found in database');
-    return user;
-  })
-
-  // All Users from Database
-  .get('/api/v1/users', async () => {
-    const list = await db
+  // Signed-in user + their workspaces/roles (replaces the old demo login endpoints)
+  .get('/api/v1/me', async ({ session }) => {
+    const rows = await db
       .select({
-        id: schema.users.id,
-        name: schema.users.name,
-        email: schema.users.email,
-        avatarUrl: schema.users.avatarUrl,
-        createdAt: schema.users.createdAt,
-        role: schema.memberships.role,
-        workspaceSlug: schema.workspaces.slug
+        id: schema.workspaces.id,
+        name: schema.workspaces.name,
+        slug: schema.workspaces.slug,
+        role: schema.memberships.role
       })
-      .from(schema.users)
-      .leftJoin(schema.memberships, eq(schema.memberships.userId, schema.users.id))
-      .leftJoin(schema.workspaces, eq(schema.workspaces.id, schema.memberships.workspaceId));
-    return list;
+      .from(schema.memberships)
+      .innerJoin(schema.workspaces, eq(schema.workspaces.id, schema.memberships.workspaceId))
+      .where(eq(schema.memberships.userId, session!.user.id));
+    return { user: session!.user, workspaces: rows };
   })
-
-  // User Login from Database
-  .post(
-    '/api/v1/auth/login',
-    async ({ body, set }) => {
-      const email = body.email.trim().toLowerCase();
-      const user = await db.query.users.findFirst({
-        where: eq(schema.users.email, email)
-      });
-      if (!user) {
-        set.status = 404;
-        return { error: 'Pengguna tidak ditemukan di database.' };
-      }
-
-      const membership = await db.query.memberships.findFirst({
-        where: eq(schema.memberships.userId, user.id)
-      });
-
-      return {
-        user,
-        role: membership?.role || 'viewer',
-        token: `session_${user.id}_${Date.now()}`
-      };
-    },
-    {
-      body: t.Object({
-        email: t.String(),
-        password: t.Optional(t.String())
-      })
-    }
-  )
-
-  // Google OAuth / SSO Login to Database
-  .post(
-    '/api/v1/auth/google',
-    async ({ body }) => {
-      const email = (body.email || 'budi.santoso@gmail.com').trim().toLowerCase();
-      const name = body.name || (email.split('@')[0].replace('.', ' ').replace(/\b\w/g, (l) => l.toUpperCase()));
-      const avatarUrl = body.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop';
-
-      let defaultWs = await db.query.workspaces.findFirst({
-        where: eq(schema.workspaces.slug, 'maujahit')
-      });
-      if (!defaultWs) {
-        defaultWs = await db.query.workspaces.findFirst();
-      }
-
-      let user = await db.query.users.findFirst({
-        where: eq(schema.users.email, email)
-      });
-
-      if (!user) {
-        const id = `usr_google_${Date.now().toString(36)}`;
-        const [newUser] = await db
-          .insert(schema.users)
-          .values({
-            id,
-            email,
-            name,
-            avatarUrl
-          })
-          .returning();
-        user = newUser;
-
-        if (defaultWs) {
-          await db
-            .insert(schema.memberships)
-            .values({
-              workspaceId: defaultWs.id,
-              userId: user.id,
-              role: 'owner'
-            })
-            .onConflictDoNothing();
-
-          await db.insert(schema.auditLogs).values({
-            workspaceId: defaultWs.id,
-            actor: user.id,
-            action: 'auth.google_signup',
-            targetType: 'user',
-            targetId: user.id,
-            meta: { provider: 'google', email, method: 'sso_oauth' }
-          });
-        }
-      } else {
-        if (avatarUrl && avatarUrl !== user.avatarUrl) {
-          await db.update(schema.users).set({ avatarUrl }).where(eq(schema.users.id, user.id));
-        }
-
-        if (defaultWs) {
-          await db.insert(schema.auditLogs).values({
-            workspaceId: defaultWs.id,
-            actor: user.id,
-            action: 'auth.google_login',
-            targetType: 'user',
-            targetId: user.id,
-            meta: { provider: 'google', email, method: 'sso_oauth' }
-          });
-        }
-      }
-
-      const membership = await db.query.memberships.findFirst({
-        where: eq(schema.memberships.userId, user.id)
-      });
-
-      return {
-        user,
-        role: membership?.role || 'owner',
-        token: `google_session_${user.id}_${Date.now()}`
-      };
-    },
-    {
-      body: t.Object({
-        email: t.Optional(t.String()),
-        name: t.Optional(t.String()),
-        avatarUrl: t.Optional(t.String()),
-        credential: t.Optional(t.String())
-      })
-    }
-  )
 
   // 1. Workspaces
-  .get('/api/v1/workspaces', async () => {
-    const list = await db.query.workspaces.findMany({
-      orderBy: [desc(schema.workspaces.createdAt)]
-    });
-    return list;
+  .get('/api/v1/workspaces', async ({ session }) => {
+    // Only workspaces the caller belongs to (tenant isolation).
+    return db
+      .select({
+        id: schema.workspaces.id,
+        name: schema.workspaces.name,
+        slug: schema.workspaces.slug,
+        createdAt: schema.workspaces.createdAt,
+        role: schema.memberships.role
+      })
+      .from(schema.memberships)
+      .innerJoin(schema.workspaces, eq(schema.workspaces.id, schema.memberships.workspaceId))
+      .where(eq(schema.memberships.userId, session!.user.id))
+      .orderBy(desc(schema.workspaces.createdAt));
   })
 
   .post(
     '/api/v1/workspaces',
-    async ({ body }) => {
+    async ({ body, session }) => {
       const slug = body.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
       const [ws] = await db
         .insert(schema.workspaces)
@@ -214,6 +119,9 @@ export const app = new Elysia()
         status: 'trial'
       });
 
+      // Creator becomes owner.
+      await db.insert(schema.memberships).values({ workspaceId: ws.id, userId: session!.user.id, role: 'owner' });
+
       return ws;
     },
     {
@@ -224,7 +132,7 @@ export const app = new Elysia()
   )
 
   // Workspace Members from Database
-  .get('/api/v1/workspaces/:ws/members', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/members', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -247,7 +155,7 @@ export const app = new Elysia()
   // Invite/add Member to Database
   .post(
     '/api/v1/workspaces/:ws/members',
-    async ({ params, body }) => {
+    async ({ session, params, body }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -309,7 +217,7 @@ export const app = new Elysia()
   )
 
   // 2. Social Accounts
-  .get('/api/v1/workspaces/:ws/accounts', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/accounts', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) return [];
     const accounts = await db.query.socialAccounts.findMany({
@@ -337,7 +245,7 @@ export const app = new Elysia()
 
   .post(
     '/api/v1/workspaces/:ws/accounts/connect/meta',
-    async ({ params, body }) => {
+    async ({ session, params, body }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -379,7 +287,7 @@ export const app = new Elysia()
 
       await db.insert(schema.auditLogs).values({
         workspaceId: ws.id,
-        actor: 'user',
+        actor: session?.user.id ?? 'unknown',
         action: 'account.connected',
         targetType: 'social_account',
         targetId: acc.id,
@@ -400,7 +308,7 @@ export const app = new Elysia()
   )
 
   // Instagram Login (no Facebook Page): step 1 — URL for the "Hubungkan Instagram" button
-  .get('/api/v1/workspaces/:ws/accounts/connect/instagram', async ({ params, set }) => {
+  .get('/api/v1/workspaces/:ws/accounts/connect/instagram', async ({ session, params, set }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) {
       set.status = 404;
@@ -417,7 +325,7 @@ export const app = new Elysia()
   // Step 2 — exchange the ?code from the redirect, connect the account, poll immediately
   .post(
     '/api/v1/workspaces/:ws/accounts/connect/instagram',
-    async ({ params, body, set }) => {
+    async ({ session, params, body, set }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) {
         set.status = 404;
@@ -432,7 +340,7 @@ export const app = new Elysia()
 
         await db.insert(schema.auditLogs).values({
           workspaceId: ws.id,
-          actor: 'user',
+          actor: session?.user.id ?? 'unknown',
           action: 'account.connected',
           targetType: 'social_account',
           targetId: account.id,
@@ -449,7 +357,7 @@ export const app = new Elysia()
     { body: t.Object({ code: t.String({ minLength: 10 }), state: t.Optional(t.String()) }) }
   )
 
-  .delete('/api/v1/workspaces/:ws/accounts/:id', async ({ params }) => {
+  .delete('/api/v1/workspaces/:ws/accounts/:id', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -459,7 +367,7 @@ export const app = new Elysia()
 
     await db.insert(schema.auditLogs).values({
       workspaceId: ws.id,
-      actor: 'user',
+      actor: session?.user.id ?? 'unknown',
       action: 'account.disconnected',
       targetType: 'social_account',
       targetId: params.id,
@@ -470,7 +378,7 @@ export const app = new Elysia()
   })
 
   // Trigger an immediate poll (dev mode has no comment webhooks)
-  .post('/api/v1/workspaces/:ws/accounts/:id/sync', async ({ params }) => {
+  .post('/api/v1/workspaces/:ws/accounts/:id/sync', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
     const acc = await db.query.socialAccounts.findFirst({
@@ -482,7 +390,7 @@ export const app = new Elysia()
   })
 
   // 3. Comments (List, Filter, Search, Detail, Label Correction)
-  .get('/api/v1/workspaces/:ws/comments', async ({ params, query }) => {
+  .get('/api/v1/workspaces/:ws/comments', async ({ session, params, query }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) return { items: [], total: 0 };
 
@@ -548,7 +456,7 @@ export const app = new Elysia()
     };
   })
 
-  .get('/api/v1/workspaces/:ws/comments/:id', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/comments/:id', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -584,7 +492,7 @@ export const app = new Elysia()
   // F13: Label correction by human
   .patch(
     '/api/v1/workspaces/:ws/comments/:id/label',
-    async ({ params, body }) => {
+    async ({ session, params, body }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -604,7 +512,7 @@ export const app = new Elysia()
 
       await db.insert(schema.auditLogs).values({
         workspaceId: ws.id,
-        actor: 'user',
+        actor: session?.user.id ?? 'unknown',
         action: 'label.corrected',
         targetType: 'comment',
         targetId: params.id,
@@ -622,7 +530,7 @@ export const app = new Elysia()
   )
 
   // 4. Review Queue (PRD §8, §10)
-  .get('/api/v1/workspaces/:ws/review', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/review', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) return [];
 
@@ -675,7 +583,7 @@ export const app = new Elysia()
   // Approve draft (shortcut A)
   .post(
     '/api/v1/workspaces/:ws/review/:commentId/approve',
-    async ({ params, body }) => {
+    async ({ session, params, body }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -718,7 +626,7 @@ export const app = new Elysia()
 
       await db.insert(schema.auditLogs).values({
         workspaceId: ws.id,
-        actor: 'user',
+        actor: session?.user.id ?? 'unknown',
         action: 'reply.approved',
         targetType: 'comment',
         targetId: params.commentId,
@@ -737,7 +645,7 @@ export const app = new Elysia()
   )
 
   // Regenerate draft (shortcut R)
-  .post('/api/v1/workspaces/:ws/review/:commentId/regenerate', async ({ params }) => {
+  .post('/api/v1/workspaces/:ws/review/:commentId/regenerate', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -778,7 +686,7 @@ export const app = new Elysia()
   })
 
   // Hide comment (shortcut H)
-  .post('/api/v1/workspaces/:ws/review/:commentId/hide', async ({ params }) => {
+  .post('/api/v1/workspaces/:ws/review/:commentId/hide', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -796,7 +704,7 @@ export const app = new Elysia()
 
     await db.insert(schema.auditLogs).values({
       workspaceId: ws.id,
-      actor: 'user',
+      actor: session?.user.id ?? 'unknown',
       action: 'comment.hide_requested',
       targetType: 'comment',
       targetId: params.commentId,
@@ -807,7 +715,7 @@ export const app = new Elysia()
   })
 
   // Dismiss comment (shortcut D)
-  .post('/api/v1/workspaces/:ws/review/:commentId/dismiss', async ({ params }) => {
+  .post('/api/v1/workspaces/:ws/review/:commentId/dismiss', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -818,7 +726,7 @@ export const app = new Elysia()
 
     await db.insert(schema.auditLogs).values({
       workspaceId: ws.id,
-      actor: 'user',
+      actor: session?.user.id ?? 'unknown',
       action: 'comment.dismissed',
       targetType: 'comment',
       targetId: params.commentId,
@@ -829,7 +737,7 @@ export const app = new Elysia()
   })
 
   // 5. Reply Policy GET / PUT / Preview
-  .get('/api/v1/workspaces/:ws/accounts/:id/policy', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/accounts/:id/policy', async ({ session, params }) => {
     const policy = await db.query.replyPolicies.findFirst({
       where: eq(schema.replyPolicies.socialAccountId, params.id as any)
     });
@@ -838,7 +746,7 @@ export const app = new Elysia()
 
   .put(
     '/api/v1/workspaces/:ws/accounts/:id/policy',
-    async ({ params, body }) => {
+    async ({ session, params, body }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -859,7 +767,7 @@ export const app = new Elysia()
 
       await db.insert(schema.auditLogs).values({
         workspaceId: ws.id,
-        actor: 'user',
+        actor: session?.user.id ?? 'unknown',
         action: 'policy.updated',
         targetType: 'reply_policy',
         targetId: params.id,
@@ -942,7 +850,7 @@ export const app = new Elysia()
   )
 
   // 6. Dashboard Summary & Trends (PRD §5.1 FR-6, §10)
-  .get('/api/v1/workspaces/:ws/dashboard/summary', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/dashboard/summary', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -1002,7 +910,7 @@ export const app = new Elysia()
     };
   })
 
-  .get('/api/v1/workspaces/:ws/dashboard/trend', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/dashboard/trend', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) return [];
 
@@ -1016,7 +924,7 @@ export const app = new Elysia()
   })
 
   // 7. Reports & CSV Export (PRD §5.1 FR-7)
-  .get('/api/v1/workspaces/:ws/reports', async ({ params, query }) => {
+  .get('/api/v1/workspaces/:ws/reports', async ({ session, params, query }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -1041,7 +949,7 @@ export const app = new Elysia()
     };
   })
 
-  .get('/api/v1/workspaces/:ws/reports/export.csv', async ({ params, set }) => {
+  .get('/api/v1/workspaces/:ws/reports/export.csv', async ({ session, params, set }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -1080,7 +988,7 @@ export const app = new Elysia()
     return await db.query.plans.findMany();
   })
 
-  .get('/api/v1/workspaces/:ws/billing', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/billing', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) throw new Error('Workspace not found');
 
@@ -1115,7 +1023,7 @@ export const app = new Elysia()
 
   .post(
     '/api/v1/workspaces/:ws/billing/checkout',
-    async ({ params, body }) => {
+    async ({ session, params, body }) => {
       const ws = await getWorkspaceBySlugOrId(params.ws);
       if (!ws) throw new Error('Workspace not found');
 
@@ -1162,7 +1070,7 @@ export const app = new Elysia()
   )
 
   // 9. Audit Logs
-  .get('/api/v1/workspaces/:ws/audit-logs', async ({ params }) => {
+  .get('/api/v1/workspaces/:ws/audit-logs', async ({ session, params }) => {
     const ws = await getWorkspaceBySlugOrId(params.ws);
     if (!ws) return [];
 

@@ -5,8 +5,8 @@
   import LoginView from '$lib/components/LoginView.svelte';
   import { toast } from '$lib/toast';
   import { HOME_PATH } from '$lib/nav';
-  import { session, signIn, signOut, toggleTheme, toggleLang, type SessionUser } from '$lib/session.svelte';
-  import type { UserRole } from '$lib/types';
+  import { api, type Me } from '$lib/api';
+  import { session, signIn, signOut, toggleTheme, toggleLang } from '$lib/session.svelte';
 
   /** Only allow same-app paths as post-login targets (no open redirect). */
   function target() {
@@ -14,15 +14,19 @@
     return r && r.startsWith('/') && !r.startsWith('//') ? r : HOME_PATH;
   }
 
-  onMount(() => {
-    if (page.url.searchParams.get('action') === 'logout') signOut();
-    else if (session.isAuthenticated) goto(target(), { replaceState: true });
+  onMount(async () => {
+    if (page.url.searchParams.get('action') === 'logout') {
+      await api.signOut();
+      signOut();
+    } else if (session.isAuthenticated) {
+      goto(target(), { replaceState: true });
+    }
   });
 
-  function handleLogin(role: UserRole = 'owner', user?: SessionUser) {
-    signIn(role, user);
+  function handleLogin(me: Me) {
+    signIn(me);
     toast.success(
-      session.isLangEn ? `Signed in as ${user?.name || role} (${role})` : `Berhasil masuk sebagai ${user?.name || role} (${role})`,
+      session.isLangEn ? `Signed in as ${me.user.name}` : `Berhasil masuk sebagai ${me.user.name}`,
       session.isLangEn ? 'Welcome back' : 'Selamat datang'
     );
     goto(target(), { replaceState: true });

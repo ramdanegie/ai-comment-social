@@ -13,7 +13,7 @@ const MAX_ATTEMPTS = 3;
 /** Dev mode has no comment webhooks → polling is the primary source. PRD fallback in production = 600s. */
 const POLL_INTERVAL_SEC = Number(process.env.META_POLL_INTERVAL_SEC || 300);
 
-console.log('Replyra Background Worker started...');
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Job = { id: string; type: string; payload: any; attempts: number };
 
@@ -59,7 +59,7 @@ async function handle(job: Job) {
   }
 }
 
-async function processNextJob() {
+export async function processNextJob() {
   const job = await claimNextJob();
   if (!job) return false;
 
@@ -87,7 +87,7 @@ async function processNextJob() {
 }
 
 /** Enqueue one poll_account job per connected Meta account per interval bucket (dedupe_key keeps it idempotent). */
-async function schedulePolls() {
+export async function schedulePolls() {
   const accounts = await db
     .select({ id: schema.socialAccounts.id })
     .from(schema.socialAccounts)
@@ -104,7 +104,9 @@ async function schedulePolls() {
   }
 }
 
-async function loop() {
+/** Long-running worker (VPS / local dev). */
+export async function loop() {
+  console.log('Replyra Background Worker started...');
   let lastSchedule = 0;
   while (true) {
     try {
@@ -113,14 +115,32 @@ async function loop() {
         lastSchedule = Date.now();
       }
       const processed = await processNextJob();
-      if (!processed) await Bun.sleep(2000);
+      if (!processed) await sleep(2000);
     } catch (err) {
       console.error('[Worker] loop error:', err);
-      await Bun.sleep(5000);
+      await sleep(5000);
     }
   }
 }
 
+/**
+ * One pass for cron on shared hosting (no long-running processes allowed):
+ * enqueue due polls, then drain the queue until empty or the time budget runs out.
+ */
+export async function runOnce(budgetMs = 50_000) {
+  const deadline = Date.now() + budgetMs;
+  await schedulePolls();
+  let processed = 0;
+  while (Date.now() < deadline && (await processNextJob())) processed++;
+  return processed;
+}
+
 if (import.meta.main) {
-  loop();
+  if (process.argv.includes('--once')) {
+    runOnce()
+      .then((n) => console.log(`[Worker] once: ${n} job(s) processed`))
+      .finally(() => process.exit(0));
+  } else {
+    loop();
+  }
 }

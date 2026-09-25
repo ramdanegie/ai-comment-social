@@ -34,8 +34,6 @@
     onLogout?: () => void;
   } = $props();
 
-  const showRoleSwitcher = import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE === 'true';
-
   let workspaces: Array<{ id: string; name: string; slug: string }> = $state([]);
 
   async function loadWorkspaces() {
@@ -120,20 +118,6 @@
       <span>{isLangEn ? 'New Brand' : 'Brand Baru'}</span>
     </button>
 
-    <!-- Role Switcher: demo/dev only, never shown in production builds -->
-    {#if showRoleSwitcher}
-      <label class="hidden items-center gap-1.5 rounded-xl border border-dashed border-amber-300 bg-amber-50/70 px-2.5 py-1 text-xs dark:border-amber-700/60 dark:bg-amber-950/30 md:flex">
-        <span class="text-[11px] font-medium text-amber-700 dark:text-amber-400">Demo role</span>
-        <select
-          bind:value={currentRole}
-          class="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-slate-700 focus:outline-none dark:text-slate-200"
-        >
-          <option value="owner" class="dark:bg-slate-900">Owner</option>
-          <option value="admin" class="dark:bg-slate-900">Admin</option>
-          <option value="viewer" class="dark:bg-slate-900">Viewer</option>
-        </select>
-      </label>
-    {/if}
 
     <!-- Review Alert Badge Icon -->
     <button

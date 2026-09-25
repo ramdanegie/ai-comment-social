@@ -9,21 +9,27 @@ import type {
   AuditLogItem,
   UserRole
 } from './types';
+import { authFetch, setToken } from './authToken';
 
 const API_BASE = typeof window !== 'undefined'
   ? (import.meta.env.VITE_API_URL || 'http://127.0.0.1:3099')
   : 'http://127.0.0.1:3099';
 
+export type Me = {
+  user: { id: string; name: string; email: string; image?: string | null };
+  workspaces: Array<{ id: string; name: string; slug: string; role: UserRole }>;
+};
+
 export const api = {
   // 1. Workspaces (PostgreSQL workspaces table)
   async getWorkspaces(): Promise<Array<{ id: string; name: string; slug: string; createdAt: string }>> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces`);
     if (!res.ok) throw new Error('Gagal mengambil daftar workspace');
     return await res.json();
   },
 
   async createWorkspace(name: string): Promise<{ id: string; name: string; slug: string }> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name })
@@ -32,48 +38,43 @@ export const api = {
     return await res.json();
   },
 
-  // 2. Users & Authentication (PostgreSQL users & memberships tables)
-  async getUsers(): Promise<Array<{ id: string; name: string; email: string; avatarUrl?: string; role?: UserRole; workspaceSlug?: string }>> {
-    const res = await fetch(`${API_BASE}/api/v1/users`);
-    if (!res.ok) throw new Error('Gagal mengambil data pengguna');
-    return await res.json();
-  },
-
-  async login(email: string, password?: string): Promise<{ user: any; role: UserRole; token: string }> {
-    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+  // 2. Authentication (Better Auth, bearer token)
+  /** Email + password sign-in. Stores the session token and returns the user + their workspaces. */
+  async signIn(email: string, password: string): Promise<Me> {
+    const res = await fetch(`${API_BASE}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Autentikasi gagal. Akun tidak ditemukan.');
+      throw new Error(
+        res.status === 429
+          ? 'Terlalu banyak percobaan. Tunggu 1 menit lalu coba lagi.'
+          : res.status === 401
+            ? 'Email atau kata sandi salah.'
+            : err.message || 'Login gagal.'
+      );
     }
-    return await res.json();
+    const token = res.headers.get('set-auth-token');
+    if (!token) throw new Error('Server tidak mengirim token sesi (cek CORS exposeHeaders).');
+    setToken(token);
+    return this.getMe();
   },
 
-  async loginWithGoogle(payload?: { email?: string; name?: string; avatarUrl?: string; credential?: string }): Promise<{ user: any; role: UserRole; token: string }> {
-    const res = await fetch(`${API_BASE}/api/v1/auth/google`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload || {})
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Autentikasi Google gagal. Silakan coba lagi.');
-    }
-    return await res.json();
+  async signOut(): Promise<void> {
+    await authFetch(`${API_BASE}/api/auth/sign-out`, { method: 'POST' }).catch(() => {});
   },
 
-  async getCurrentUser(): Promise<any> {
-    const res = await fetch(`${API_BASE}/api/v1/auth/me`);
-    if (!res.ok) throw new Error('Gagal mengambil konteks user');
+  async getMe(): Promise<Me> {
+    const res = await authFetch(`${API_BASE}/api/v1/me`);
+    if (!res.ok) throw new Error('Sesi tidak valid');
     return await res.json();
   },
 
   // 3. Workspace Members (PostgreSQL memberships & users join)
   async getMembers(ws: string = 'maujahit'): Promise<Array<{ id: string; name: string; email: string; avatarUrl?: string; role: string; createdAt?: string }>> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/members`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/members`);
     if (!res.ok) throw new Error('Gagal mengambil anggota tim workspace');
     return await res.json();
   },
@@ -82,7 +83,7 @@ export const api = {
     ws: string = 'maujahit',
     payload: { email: string; role: string; name?: string }
   ): Promise<any> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/members`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -93,7 +94,7 @@ export const api = {
 
   // 4. Dashboard Summary & Trends (PostgreSQL comments, classifications & daily_metrics)
   async getSummary(ws: string = 'maujahit'): Promise<DashboardSummary> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/dashboard/summary`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/dashboard/summary`);
     if (!res.ok) {
       return {
         total: 0,
@@ -111,7 +112,7 @@ export const api = {
   },
 
   async getTrends(ws: string = 'maujahit'): Promise<DailyMetric[]> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/dashboard/trend`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/dashboard/trend`);
     if (!res.ok) return [];
     return await res.json();
   },
@@ -138,20 +139,20 @@ export const api = {
     if (filters?.limit) q.set('limit', String(filters.limit));
     if (filters?.offset) q.set('offset', String(filters.offset));
 
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/comments?${q.toString()}`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/comments?${q.toString()}`);
     if (!res.ok) return { items: [], total: 0 };
     return await res.json();
   },
 
   // 6. Review Queue (PostgreSQL comments where status = 'NEEDS_REVIEW')
   async getReviewQueue(ws: string = 'maujahit'): Promise<CommentItem[]> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/review`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review`);
     if (!res.ok) return [];
     return await res.json();
   },
 
   async approveReview(ws: string = 'maujahit', commentId: string, text?: string): Promise<boolean> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/approve`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
@@ -160,7 +161,7 @@ export const api = {
   },
 
   async regenerateReview(ws: string = 'maujahit', commentId: string): Promise<string> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/regenerate`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/regenerate`, {
       method: 'POST'
     });
     if (!res.ok) throw new Error('Gagal regenerate balasan dari server AI');
@@ -169,21 +170,21 @@ export const api = {
   },
 
   async hideReview(ws: string = 'maujahit', commentId: string): Promise<boolean> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/hide`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/hide`, {
       method: 'POST'
     });
     return res.ok;
   },
 
   async dismissReview(ws: string = 'maujahit', commentId: string): Promise<boolean> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/dismiss`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/review/${commentId}/dismiss`, {
       method: 'POST'
     });
     return res.ok;
   },
 
   async correctLabel(ws: string = 'maujahit', commentId: string, sentiment: string, riskLabel: string): Promise<boolean> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/comments/${commentId}/label`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/comments/${commentId}/label`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sentiment, riskLabel })
@@ -193,7 +194,7 @@ export const api = {
 
   // 7. Social Accounts (PostgreSQL social_accounts & reply_policies)
   async getAccounts(ws: string = 'maujahit'): Promise<SocialAccount[]> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts`);
     if (!res.ok) return [];
     return await res.json();
   },
@@ -202,7 +203,7 @@ export const api = {
     ws: string = 'maujahit',
     payload: { platform: string; externalId: string; username: string; accessToken: string; avatarUrl?: string }
   ): Promise<SocialAccount> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/meta`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/meta`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -212,7 +213,7 @@ export const api = {
   },
 
   async disconnectAccount(ws: string = 'maujahit', accountId: string): Promise<boolean> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}`, {
       method: 'DELETE'
     });
     return res.ok;
@@ -220,7 +221,7 @@ export const api = {
 
   /** Instagram Login: authorize URL (with signed state) for the "Hubungkan Instagram" button. */
   async getInstagramConnectUrl(ws: string = 'maujahit'): Promise<{ url: string; redirectUri: string }> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Gagal menyiapkan koneksi Instagram');
     return data;
@@ -228,7 +229,7 @@ export const api = {
 
   /** Exchange the ?code from Instagram's redirect and connect the account. */
   async connectInstagram(ws: string = 'maujahit', code: string, state?: string): Promise<SocialAccount> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/connect/instagram`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, state })
@@ -240,18 +241,18 @@ export const api = {
 
   /** Queue an immediate poll of the account's latest posts/comments. */
   async syncAccount(ws: string = 'maujahit', accountId: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/sync`, { method: 'POST' });
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/sync`, { method: 'POST' });
     if (!res.ok) throw new Error('Gagal memulai sinkronisasi');
   },
 
   async getPolicy(ws: string = 'maujahit', accountId: string): Promise<ReplyPolicy> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`);
     if (!res.ok) throw new Error('Gagal mengambil konfigurasi aturan');
     return await res.json();
   },
 
   async updatePolicy(ws: string = 'maujahit', accountId: string, policy: ReplyPolicy): Promise<ReplyPolicy> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(policy)
@@ -274,7 +275,7 @@ export const api = {
       autoHideSpam: boolean;
     }
   ) {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy/preview`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/accounts/${accountId}/policy/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -285,7 +286,7 @@ export const api = {
 
   // 8. Reports & Analytics (PostgreSQL daily_metrics & posts)
   async getReports(ws: string = 'maujahit', period: string = 'daily') {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/reports?period=${period}`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/reports?period=${period}`);
     if (!res.ok) return { period, metrics: [], topPosts: [] };
     return await res.json();
   },
@@ -296,13 +297,13 @@ export const api = {
 
   // 9. Billing, Plans & Payments (PostgreSQL plans, subscriptions, payments)
   async getPlans(): Promise<Plan[]> {
-    const res = await fetch(`${API_BASE}/api/v1/plans`);
+    const res = await authFetch(`${API_BASE}/api/v1/plans`);
     if (!res.ok) return [];
     return await res.json();
   },
 
   async getBilling(ws: string = 'maujahit') {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/billing`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing`);
     if (!res.ok) {
       return {
         subscription: null,
@@ -317,7 +318,7 @@ export const api = {
   },
 
   async checkout(ws: string = 'maujahit', payload: { kind: string; planId?: string; aiUnits?: number }) {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/billing/checkout`, {
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/billing/checkout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -328,7 +329,7 @@ export const api = {
 
   // 10. Audit Logs (PostgreSQL audit_logs)
   async getAuditLogs(ws: string = 'maujahit'): Promise<AuditLogItem[]> {
-    const res = await fetch(`${API_BASE}/api/v1/workspaces/${ws}/audit-logs`);
+    const res = await authFetch(`${API_BASE}/api/v1/workspaces/${ws}/audit-logs`);
     if (!res.ok) return [];
     return await res.json();
   }

@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "@elysiajs/cors": "^1.2.0",
+    "@elysiajs/node": "^1.4.5",
     "@elysiajs/swagger": "^1.2.2",
+    "@replyra/db": "workspace:*",
     "@sinclair/typebox": "^0.34.14",
+    "better-auth": "^1.7.6",
     "drizzle-orm": "^0.39.3",
     "elysia": "^1.2.10",
-    "postgres": "^3.4.5",
-    "@replyra/db": "workspace:*"
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@types/bun": "latest"
