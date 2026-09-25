@@ -58,6 +58,15 @@
   // Interactive Live Preview Tester
   let sampleCommentInput: string = $state('Bisa bikin jas semi-formal warna navy ukuran custom nggak kak? Estimasi berapa lama?');
   let sampleAuthorInput: string = $state('Rian Nugraha');
+  let samplePostCaptionInput: string = $state('');
+
+  const KNOWLEDGE_PLACEHOLDER = `Contoh:
+- Jas custom: mulai Rp1.250.000 (bahan wool blend), pengerjaan 14 hari kerja
+- Kebaya wisuda custom: mulai Rp850.000, fitting 1x di workshop
+- Ukuran: S–XXL tersedia, jumbo bisa custom (+Rp100.000)
+- Order: DM foto model + ukuran, DP 50%
+- Workshop: Bandung, buka Senin–Sabtu 09.00–17.00
+- Pengiriman ke seluruh Indonesia`;
   let isTestingPreview: boolean = $state(false);
   let previewResult: any = $state(null);
 
@@ -68,7 +77,7 @@
       if (accounts.length > 0) {
         selectedAccountId = accounts[0].id;
         if (accounts[0].policy) {
-          policy = JSON.parse(JSON.stringify(accounts[0].policy));
+          policy = normalizePolicy(JSON.parse(JSON.stringify(accounts[0].policy)));
         }
       }
     } finally {
@@ -81,7 +90,7 @@
   function handleAccountChange() {
     const acc = accounts.find((a) => a.id === selectedAccountId);
     if (acc?.policy) {
-      policy = JSON.parse(JSON.stringify(acc.policy));
+      policy = normalizePolicy(JSON.parse(JSON.stringify(acc.policy)));
     }
   }
 
@@ -130,6 +139,16 @@
     }
   }
 
+  /** Older/newly connected accounts may store null arrays; the editor and API expect arrays. */
+  function normalizePolicy(p: ReplyPolicy): ReplyPolicy {
+    return {
+      ...p,
+      customBlockedKeywords: p.customBlockedKeywords ?? [],
+      autoReplyIntents: p.autoReplyIntents ?? [],
+      brandVoice: { ...p.brandVoice, knowledge: p.brandVoice?.knowledge ?? '', examples: p.brandVoice?.examples ?? [] }
+    };
+  }
+
   async function handleRunPreview() {
     if (!sampleCommentInput.trim()) return;
     isTestingPreview = true;
@@ -137,6 +156,7 @@
       previewResult = await api.previewPolicy(workspaceSlug, selectedAccountId, {
         sampleComment: sampleCommentInput,
         sampleAuthor: sampleAuthorInput,
+        samplePostCaption: samplePostCaptionInput,
         mode: policy.mode,
         autoReplyIntents: policy.autoReplyIntents,
         minConfidence: policy.minConfidence,
@@ -389,6 +409,45 @@
           />
         </div>
 
+        <!-- Business knowledge: the facts the AI is allowed to quote -->
+        <div>
+          <div class="flex items-baseline justify-between">
+            <label for="brand-knowledge" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Info Bisnis untuk AI (harga, estimasi, cara order, lokasi):
+            </label>
+            <span class="font-mono text-[10px] text-slate-400">{(policy.brandVoice.knowledge ?? '').length}/3000</span>
+          </div>
+          <p class="mt-0.5 text-[11px] text-slate-500">
+            AI hanya menyebut harga/estimasi yang tertulis di sini. Kosong = AI tidak menjawab angka dan mengarahkan ke DM.
+          </p>
+          <textarea
+            id="brand-knowledge"
+            rows="7"
+            maxlength="3000"
+            bind:value={policy.brandVoice.knowledge}
+            placeholder={KNOWLEDGE_PLACEHOLDER}
+            class="mt-1.5 w-full rounded-xl border border-slate-200 p-2.5 text-xs leading-relaxed dark:border-slate-700 dark:bg-slate-800"
+          ></textarea>
+        </div>
+
+        <!-- Style examples -->
+        <div>
+          <label for="brand-examples" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+            Contoh balasan ideal (1 per baris, maks. 5):
+          </label>
+          <p class="mt-0.5 text-[11px] text-slate-500">Dipakai AI sebagai acuan gaya bahasa, bukan disalin mentah.</p>
+          <textarea
+            id="brand-examples"
+            rows="4"
+            bind:value={
+              () => (policy.brandVoice.examples ?? []).join('\n'),
+              (v) => (policy.brandVoice.examples = v.split('\n').slice(0, 5))
+            }
+            placeholder={'Wah makasih banyak kak Sinta, seneng banget kebayanya pas di hari wisuda! 🥰\nBisa kak, ukuran jumbo kami buatkan custom. Boleh DM lingkar dada & pinggangnya ya?'}
+            class="mt-1.5 w-full rounded-xl border border-slate-200 p-2.5 text-xs leading-relaxed dark:border-slate-700 dark:bg-slate-800"
+          ></textarea>
+        </div>
+
         <!-- Forbidden phrases editor -->
         <div>
           <label for="forbidden-phrase" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -450,6 +509,17 @@
           </div>
 
           <div>
+            <label for="samplePostCaptionInput" class="block font-semibold text-slate-700 dark:text-slate-300">Caption Post (opsional):</label>
+            <input
+              id="samplePostCaptionInput"
+              type="text"
+              bind:value={samplePostCaptionInput}
+              placeholder="mis. Jas semi-formal navy, bisa custom ukuran"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-800"
+            />
+          </div>
+
+          <div>
             <label for="sampleCommentInput" class="block font-semibold text-slate-700 dark:text-slate-300">Teks Komentar Contoh:</label>
             <textarea
               id="sampleCommentInput"
@@ -489,6 +559,9 @@
                 {#if usedAi}
                   <p class="font-semibold">✓ AI aktif · {previewResult.classification.model}</p>
                   <p class="opacity-80">Keyakinan {Math.round(previewResult.classification.confidence * 100)}%{#if ai.remainingUnits !== null} · sisa {ai.remainingUnits} unit AI{/if}</p>
+                  {#if ai.timingMs}
+                    <p class="opacity-80">Waktu: klasifikasi {(ai.timingMs.classify / 1000).toFixed(1)} dtk · draft {(ai.timingMs.draft / 1000).toFixed(1)} dtk</p>
+                  {/if}
                 {:else if !ai.configured}
                   <p class="font-semibold">AI belum aktif: hasil di bawah dari aturan kata kunci</p>
                   <p class="opacity-80">Isi LLM_PROVIDER + API key di server (.env) lalu restart API.</p>

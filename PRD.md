@@ -317,7 +317,10 @@ Aturan dependensi: `presentation → application → domain`; `infrastructure` m
 - Admin bisa koreksi label → disimpan sebagai `human_label` (data evaluasi).
 
 **FR-5 Balasan**
-- Generate balasan dengan brand voice workspace (nama brand, gaya bahasa, emoji on/off, CTA default mis. "DM kami").
+- Generate balasan dengan brand voice per akun (nama brand, gaya bahasa, emoji on/off, CTA default mis. "DM kami").
+- **Info Bisnis (knowledge base ringan)** per akun, teks bebas ≤ 3.000 karakter: harga/range harga, estimasi pengerjaan, cara order & DP, ukuran, lokasi/jam buka, pengiriman. AI **menjawab langsung** pertanyaan yang faktanya ada di sini; bila tidak ada → satu pertanyaan klarifikasi atau arahkan ke DM. AI tidak boleh mengarang angka.
+- **Contoh balasan ideal** (≤ 5) per akun sebagai acuan gaya (few-shot), bukan template yang disalin.
+- Balasan tidak seragam: jawab isi komentar dulu, variasikan pembuka, CTA hanya saat relevan (mitigasi R4).
 - Auto-reply untuk label yang diizinkan policy (default: `positive/praise`, `positive/purchase_intent`, `neutral/question` sederhana).
 - Komentar `negative/complaint` tanpa risiko → default **draft + review**; bisa diubah jadi auto oleh owner.
 - Antrean review: approve, edit lalu kirim, regenerate, hide komentar, dismiss.
@@ -829,9 +832,11 @@ Semua route di bawah `/api/v1/workspaces/:ws/*` melewati guard `auth` + `tenant`
 - Validasi output dengan TypeBox; gagal parse → retry 1× → jika tetap gagal: `NEEDS_REVIEW`.
 
 ### 9.2 Prompt balasan
-- Input: komentar, klasifikasi, caption, brand voice, CTA, daftar frasa terlarang.
-- Aturan: ≤ 2 kalimat, sapa "kak" (configurable), tidak menjanjikan harga/diskon/refund, tidak menyebut data pribadi, tidak berdebat.
-- Post-check: jika balasan mengandung frasa terlarang / angka harga / link → turun ke `NEEDS_REVIEW`.
+- Input: komentar, klasifikasi, caption, brand voice, CTA, daftar frasa terlarang, **Info Bisnis**, **contoh balasan brand**.
+- Aturan: ≤ 2 kalimat; jawab pertanyaannya dulu; harga/diskon/estimasi/stok/kebijakan **hanya** jika tertulis di Info Bisnis; pujian → terima kasih spesifik tanpa CTA; keluhan → akui + maaf singkat + DM; ikuti bahasa pengomentar; variasikan pembuka; tidak menyebut data pribadi, link, nomor telepon; tidak berdebat.
+- Post-check: frasa terlarang / link / **angka harga yang tidak ada di Info Bisnis** → turun ke `NEEDS_REVIEW` (tidak pernah auto-send).
+- Simulator di halaman Policies (`/policy/preview`): komentar + caption contoh → klasifikasi, keputusan policy, draft, post-check, dan status AI (provider/model aktif, kuota, error terakhir) agar owner bisa memastikan AI benar-benar jalan sebelum pindah dari Shadow.
+- Provider: Claude Haiku (default), OpenAI, Gemini, DeepSeek via `LLM_PROVIDER`. Catatan: Gemini free tier boleh dipakai Google untuk training → hanya untuk uji coba, bukan data tenant produksi.
 
 ### 9.3 Evaluasi
 - Dataset seed: 300 komentar nyata MauJahit (dianonimkan) dilabeli manual.
@@ -858,7 +863,7 @@ Semua route di bawah `/api/v1/workspaces/:ws/*` melewati guard `auth` + `tenant`
 **A. Onboarding tenant baru (trial)**
 1. **Register:** owner daftar via email/Google → otomatis dibuat workspace + subscription `trial` (Shadow mode terkunci).
 2. **Connect akun:** klik "Hubungkan Instagram/Facebook" → OAuth Meta → pilih Page & akun IG → sistem subscribe webhook & tarik 20 post terakhir.
-3. **Brand voice:** isi nama brand, gaya bahasa (santai/formal), emoji on/off, CTA default ("Silakan DM kami") → coba preview pada komentar contoh.
+3. **Brand voice:** isi nama brand, gaya bahasa (santai/formal), emoji on/off, CTA default ("Silakan DM kami"), **Info Bisnis** (harga, estimasi, cara order) dan 2–5 contoh balasan ideal → coba simulasi pada komentar contoh.
 4. **Shadow berjalan:** komentar baru terklasifikasi & draft dibuat, tapi tidak ada yang dikirim. Dashboard mulai terisi.
 5. **Evaluasi:** owner membuka Review Queue, melihat draft AI, mengoreksi label yang salah.
 6. **Upgrade:** banner "Aktifkan balasan otomatis" → pilih paket → bayar via Midtrans → mode Assisted/Auto terbuka.
@@ -925,6 +930,8 @@ Semua route di bawah `/api/v1/workspaces/:ws/*` melewati guard `auth` + `tenant`
 
 ### Fase berikutnya
 - P1: PDF & email report, engagement insights, dataset koreksi.
+- P1: **Belajar dari editan admin** — balasan yang diedit lalu dikirim admin otomatis jadi contoh few-shot (per akun, 5 terbaru), dan diff draft vs final dipakai untuk evaluasi kualitas balasan.
+- P1: Info Bisnis terstruktur (katalog produk + harga + estimasi) dan konteks per post (caption + harga produk di post itu).
 - P2: agency multi-brand, billing, TikTok (setelah akses API dikonfirmasi).
 
 ---

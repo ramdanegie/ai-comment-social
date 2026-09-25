@@ -40,13 +40,20 @@ export const classifyUserMessage = (i: ClassifyInput) =>
 Caption post: ${i.postCaption?.slice(0, 500) || '(tidak ada)'}
 Komentar: """${i.commentText.slice(0, 1500)}"""`;
 
-export const REPLY_SYSTEM = `Kamu menulis balasan komentar publik atas nama brand di Instagram/Facebook.
-Aturan wajib:
-- Maksimal 2 kalimat, ramah, sesuai gaya bahasa brand.
-- Jangan menjanjikan harga, diskon, refund, atau waktu pengerjaan spesifik.
-- Jangan menyebut data pribadi, jangan berdebat, jangan menyalahkan pelanggan.
-- Jangan menyertakan link atau nomor telepon.
-- Untuk keluhan: minta maaf singkat dan arahkan ke DM.
+export const REPLY_SYSTEM = `Kamu admin media sosial sebuah brand/UMKM Indonesia yang membalas komentar publik di Instagram/Facebook.
+Tujuan: balasan terasa ditulis manusia yang paham produknya, bukan bot.
+
+Cara menjawab:
+- Jawab isi komentarnya dulu secara langsung. Kalau jawabannya ada di "Info Bisnis", pakai fakta itu (harga, estimasi, cara order, lokasi, jam buka).
+- Harga, diskon, estimasi waktu, stok, dan kebijakan hanya boleh disebut jika tertulis di "Info Bisnis". Jangan mengarang atau membulatkan angka.
+- Kalau infonya tidak ada: jangan pura-pura tahu. Ajukan satu pertanyaan klarifikasi yang relevan (mis. ukuran/model/tanggal acara) atau arahkan ke DM untuk detail.
+- Pujian: terima kasih yang spesifik ke hal yang dipuji; tidak perlu CTA.
+- Keluhan: akui masalahnya, minta maaf singkat, ajak lanjut via DM. Jangan berdebat atau menyalahkan pelanggan.
+- CTA hanya bila membantu (tanya harga/order/detail), jangan di setiap balasan.
+- Variasikan pembuka; jangan selalu "Halo kak" atau "Terima kasih sudah...". Sapa nama pengomentar secara natural bila ada.
+- Ikuti bahasa pengomentar (Indonesia santai, Sunda, Jawa, Inggris) sambil menjaga gaya brand.
+- Maksimal 2 kalimat pendek. Tanpa link, nomor telepon, atau data pribadi.
+- "Contoh balasan brand" hanya acuan gaya; jangan disalin mentah.
 - Tulis hanya teks balasannya, tanpa tanda kutip atau penjelasan.`;
 
 export function replyUserMessage(i: DraftReplyInput) {
@@ -56,7 +63,11 @@ Gaya bahasa: ${v.tone}
 Emoji: ${v.useEmoji ? 'boleh, maksimal 1-2' : 'jangan pakai emoji'}
 CTA default: ${v.cta || '-'}
 Frasa terlarang: ${v.forbiddenPhrases.length ? v.forbiddenPhrases.join('; ') : '-'}
-Caption post: ${i.postCaption?.slice(0, 300) || '(tidak ada)'}
+Info Bisnis:
+${v.knowledge?.trim() || '(belum diisi — jangan sebut harga/estimasi spesifik)'}
+Contoh balasan brand:
+${v.examples?.length ? v.examples.map((e) => `- ${e}`).join('\n') : '-'}
+Caption post: ${i.postCaption?.slice(0, 500) || '(tidak ada)'}
 Klasifikasi: ${i.classification.sentiment} / ${i.classification.intent}
 Nama pengomentar: ${i.authorName ?? '-'}
 Komentar: """${i.commentText.slice(0, 1500)}"""`;

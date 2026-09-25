@@ -277,6 +277,7 @@ export const api = {
     payload: {
       sampleComment: string;
       sampleAuthor?: string;
+      samplePostCaption?: string;
       mode: string;
       autoReplyIntents: string[];
       minConfidence: number;

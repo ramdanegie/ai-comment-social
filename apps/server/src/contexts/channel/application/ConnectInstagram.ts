@@ -114,6 +114,7 @@ export async function connectInstagramAccount(workspaceId: string, token: string
       mode: 'shadow', // PRD §10.1: nothing is sent until the owner changes the mode
       autoReplyIntents: ['praise', 'purchase_intent'],
       minConfidence: 0.8,
+      customBlockedKeywords: [],
       brandVoice: { brandName: me.username, tone: 'Ramah dan profesional', useEmoji: true, cta: 'Silakan DM kami ya kak!', forbiddenPhrases: [] }
     })
     .onConflictDoNothing({ target: schema.replyPolicies.socialAccountId });

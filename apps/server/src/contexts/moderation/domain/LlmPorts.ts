@@ -32,7 +32,15 @@ export interface DraftReplyInput {
   authorName: string | null;
   postCaption: string | null;
   classification: { sentiment: Sentiment; riskLabel: RiskLabel; intent: Intent };
-  brandVoice: { brandName: string; tone: string; useEmoji: boolean; cta: string; forbiddenPhrases: string[] };
+  brandVoice: {
+    brandName: string;
+    tone: string;
+    useEmoji: boolean;
+    cta: string;
+    forbiddenPhrases: string[];
+    knowledge?: string;
+    examples?: string[];
+  };
 }
 
 export interface LlmProvider {

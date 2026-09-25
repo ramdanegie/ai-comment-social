@@ -12,10 +12,12 @@ import {
   type NormalizedComment
 } from '../../channel/infrastructure/MetaGraphClient';
 import { classifyComment, draftReply } from '../../moderation/application/AiModeration';
-import { ReplyPolicyEvaluator, type ReplyPolicyEntity } from '../../response/domain/ReplyPolicyEvaluator';
+import { ReplyPolicyEvaluator, normalizeBrandVoice, type ReplyPolicyEntity } from '../../response/domain/ReplyPolicyEvaluator';
 import { decryptToken, encryptToken } from '../../../shared/infrastructure/crypto';
 
 const POSTS_PER_POLL = Number(process.env.META_POLL_POSTS || 10);
+/** Comments classified in parallel per poll (LLM rate limits: keep small on free tiers). */
+const AI_CONCURRENCY = Math.max(1, Number(process.env.AI_CONCURRENCY || 3));
 /** META_DRY_RUN=true → never call reply/hide on Meta, only log. Safe default for first tests. */
 const DRY_RUN = process.env.META_DRY_RUN === 'true';
 
@@ -76,13 +78,19 @@ export async function pollAccount(accountId: string) {
     const token = await ensureFreshToken(account);
     const remotePosts = await MetaGraph.listPosts(account.platform, account.externalId, token, POSTS_PER_POLL, api);
 
+    // Store first (fast, dedup), then run AI on the new ones a few at a time — each comment is
+    // two sequential LLM calls, so one-by-one made a burst of comments take minutes.
+    const fresh: Array<{ post: Post; comment: Comment }> = [];
     for (const rp of remotePosts) {
       const post = await upsertPost(account, rp);
       const remoteComments = await MetaGraph.listComments(account.platform, rp.externalId, token, api);
       for (const rc of remoteComments) {
-        if (await ingestComment(account, post, rc)) newCount++;
+        const comment = await storeComment(account, post, rc);
+        if (comment) fresh.push({ post, comment });
       }
     }
+    newCount = fresh.length;
+    await runLimited(fresh, AI_CONCURRENCY, ({ post, comment }) => classifyAndDecide(account, post, comment));
   } catch (err) {
     if (err instanceof MetaGraphError && err.isTokenInvalid) {
       await markAccountExpired(account, err);
@@ -121,10 +129,23 @@ function isOwnComment(account: SocialAccount, rc: NormalizedComment) {
   return account.platform === 'instagram' && rc.authorName?.toLowerCase() === account.username.toLowerCase();
 }
 
-/** Returns true when the comment is new. Dedup via uq_comment(platform, external_id) — AC-2. */
-export async function ingestComment(account: SocialAccount, post: Post | null, rc: NormalizedComment) {
-  if (!rc.text.trim() || isOwnComment(account, rc)) return false;
+/** Runs `fn` over items with at most `limit` in flight; rethrows the first failure after all settle. */
+async function runLimited<T>(items: T[], limit: number, fn: (item: T) => Promise<unknown>) {
+  let next = 0;
+  const errors: unknown[] = [];
+  const lane = async () => {
+    while (next < items.length) {
+      const item = items[next++];
+      await fn(item).catch((err) => errors.push(err));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+  if (errors.length) throw errors[0];
+}
 
+/** Inserts the comment; returns it when new, null for duplicates/own comments. Dedup via uq_comment — AC-2. */
+async function storeComment(account: SocialAccount, post: Post | null, rc: NormalizedComment) {
+  if (!rc.text.trim() || isOwnComment(account, rc)) return null;
   const [inserted] = await db
     .insert(schema.comments)
     .values({
@@ -140,7 +161,12 @@ export async function ingestComment(account: SocialAccount, post: Post | null, r
     })
     .onConflictDoNothing({ target: [schema.comments.platform, schema.comments.externalId] })
     .returning();
+  return inserted ?? null;
+}
 
+/** Returns true when the comment is new (webhook path: one comment at a time). */
+export async function ingestComment(account: SocialAccount, post: Post | null, rc: NormalizedComment) {
+  const inserted = await storeComment(account, post, rc);
   if (!inserted) return false;
   await classifyAndDecide(account, post, inserted);
   return true;
@@ -203,6 +229,7 @@ async function classifyAndDecide(account: SocialAccount, post: Post | null, comm
 
   // Draft only for comments without risk; hate/threat/toxic/spam never get an AI draft (PRD §5.3).
   if (classification.riskLabel === 'none') {
+    const brandVoice = normalizeBrandVoice(policy.brandVoice, account.username);
     const { text: draft } = await draftReply({
       workspaceId: account.workspaceId,
       commentId: comment.id,
@@ -211,10 +238,10 @@ async function classifyAndDecide(account: SocialAccount, post: Post | null, comm
         authorName: comment.authorName,
         postCaption: post?.caption ?? null,
         classification,
-        brandVoice: { ...policy.brandVoice, brandName: policy.brandVoice?.brandName || account.username }
+        brandVoice
       }
     });
-    const check = ReplyPolicyEvaluator.postCheckReply(draft, policy.brandVoice);
+    const check = ReplyPolicyEvaluator.postCheckReply(draft, brandVoice);
     if (!check.passed && targetStatus === 'AUTO_REPLY_QUEUED') {
       targetStatus = 'NEEDS_REVIEW';
       reason = `Post-check gagal: ${check.violations.join('; ')}`;

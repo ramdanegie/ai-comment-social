@@ -4,7 +4,7 @@ import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { db, schema } from '@replyra/db';
 import { eq, desc, and, sql, ilike, inArray } from 'drizzle-orm';
-import { ReplyPolicyEvaluator } from './contexts/response/domain/ReplyPolicyEvaluator';
+import { ReplyPolicyEvaluator, normalizeBrandVoice } from './contexts/response/domain/ReplyPolicyEvaluator';
 import { aiStatus, classifyComment, draftReply } from './contexts/moderation/application/AiModeration';
 import { encryptToken, verifyMetaSignature } from './shared/infrastructure/crypto';
 import { enqueueJob } from './contexts/engagement/application/MetaIngestion';
@@ -673,14 +673,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
     });
 
     const post = comment.postId ? await db.query.posts.findFirst({ where: eq(schema.posts.id, comment.postId) }) : null;
-    const bv = (policy?.brandVoice as any) ?? {};
-    const brandVoice = {
-      brandName: bv.brandName || ws.name,
-      tone: bv.tone || 'Ramah dan profesional',
-      useEmoji: bv.useEmoji ?? true,
-      cta: bv.cta || '',
-      forbiddenPhrases: bv.forbiddenPhrases ?? []
-    };
+    const brandVoice = normalizeBrandVoice(policy?.brandVoice, ws.name);
 
     const { text: newDraft } = await draftReply({
       workspaceId: ws.id,
@@ -811,8 +804,8 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
           minConfidence: body.minConfidence,
           dailyAutoReplyLimit: body.dailyAutoReplyLimit,
           minIntervalSeconds: body.minIntervalSeconds,
-          brandVoice: body.brandVoice,
-          customBlockedKeywords: body.customBlockedKeywords,
+          brandVoice: normalizeBrandVoice(body.brandVoice, ws.name),
+          customBlockedKeywords: body.customBlockedKeywords ?? [],
           autoHideSpam: body.autoHideSpam
         })
         .where(eq(schema.replyPolicies.socialAccountId, params.id as any))
@@ -837,7 +830,7 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         dailyAutoReplyLimit: t.Number(),
         minIntervalSeconds: t.Number(),
         brandVoice: t.Any(),
-        customBlockedKeywords: t.Array(t.String()),
+        customBlockedKeywords: t.Nullable(t.Array(t.String())),
         autoHideSpam: t.Boolean()
       })
     }
@@ -847,36 +840,33 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
   .post(
     '/api/v1/workspaces/:ws/accounts/:id/policy/preview',
     async ({ body, workspace }) => {
-      const raw: any = typeof body.brandVoice === 'object' && body.brandVoice !== null ? body.brandVoice : { tone: body.brandVoice };
-      const bv = {
-        brandName: raw.brandName || workspace!.name,
-        tone: raw.tone || 'Ramah',
-        useEmoji: raw.useEmoji ?? true,
-        cta: raw.cta || raw.defaultCta || '',
-        forbiddenPhrases: raw.forbiddenPhrases ?? []
-      };
+      const bv = normalizeBrandVoice(body.brandVoice, workspace!.name);
+      const postCaption = body.samplePostCaption?.trim() || null;
 
+      const t0 = performance.now();
       const classification = await classifyComment({
         workspaceId: workspace!.id,
         commentId: null,
         text: body.sampleComment,
-        postCaption: null,
+        postCaption,
         brandName: bv.brandName,
         customKeywords: body.customBlockedKeywords || []
       });
 
+      const t1 = performance.now();
       const { text: draft, model: draftModel } = await draftReply({
         workspaceId: workspace!.id,
         commentId: null,
         input: {
           commentText: body.sampleComment,
           authorName: body.sampleAuthor || 'Kakak',
-          postCaption: null,
+          postCaption,
           classification,
           brandVoice: bv
         }
       });
 
+      const t2 = performance.now();
       const decision = ReplyPolicyEvaluator.evaluate(
         classification,
         {
@@ -897,18 +887,24 @@ export const app = new Elysia(typeof Bun === 'undefined' ? { adapter: node() } :
         draft,
         decision,
         postCheck,
-        ai: { ...(await aiStatus(workspace!.id)), classifyModel: classification.model, draftModel }
+        ai: {
+          ...(await aiStatus(workspace!.id)),
+          classifyModel: classification.model,
+          draftModel,
+          timingMs: { classify: Math.round(t1 - t0), draft: Math.round(t2 - t1) }
+        }
       };
     },
     {
       body: t.Object({
         sampleComment: t.String(),
-        sampleAuthor: t.Optional(t.String()),
+        sampleAuthor: t.Optional(t.Nullable(t.String())),
+        samplePostCaption: t.Optional(t.Nullable(t.String({ maxLength: 2000 }))),
         mode: t.String(),
         autoReplyIntents: t.Array(t.String()),
         minConfidence: t.Number(),
         brandVoice: t.Any(),
-        customBlockedKeywords: t.Optional(t.Array(t.String())),
+        customBlockedKeywords: t.Optional(t.Nullable(t.Array(t.String()))),
         autoHideSpam: t.Boolean()
       })
     }

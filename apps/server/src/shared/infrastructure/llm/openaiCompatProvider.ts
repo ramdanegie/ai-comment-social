@@ -26,6 +26,8 @@ export function createOpenAICompatProvider(opts: {
     timeout: 30_000,
     maxRetries: 2
   });
+  // Gemini 3.x thinks before answering; short classification/replies don't need it (latency).
+  const thinking = opts.flavor === 'gemini' ? { reasoning_effort: 'minimal' as const } : {};
   const usage = (model: string, u?: OpenAI.CompletionUsage) => ({
     provider: opts.flavor,
     model,
@@ -46,6 +48,7 @@ export function createOpenAICompatProvider(opts: {
         const completion = await client.chat.completions.parse({
           model: opts.classifyModel,
           messages,
+          ...thinking,
           response_format: zodResponseFormat(ClassificationSchema, 'comment_classification')
         });
         const parsed = completion.choices[0]?.message.parsed;
@@ -69,6 +72,7 @@ export function createOpenAICompatProvider(opts: {
     async draftReply(input: DraftReplyInput) {
       const completion = await client.chat.completions.create({
         model: opts.replyModel,
+        ...thinking,
         messages: [
           { role: 'system', content: REPLY_SYSTEM },
           { role: 'user', content: replyUserMessage(input) }

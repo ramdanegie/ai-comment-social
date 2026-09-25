@@ -118,6 +118,14 @@ describe('Replyra Domain Invariants (PRD §4.3 & §18.1)', () => {
     expect(validCheck.passed).toBe(true);
   });
 
+  test('Invariant 6b: Harga boleh disebut hanya jika ada di Info Bisnis', () => {
+    const bv = { ...basePolicy.brandVoice, knowledge: 'Jas custom mulai Rp 1.250.000, pengerjaan 14 hari kerja.' };
+    expect(ReplyPolicyEvaluator.postCheckReply('Jas custom mulai Rp1.250.000 ya kak, sekitar 14 hari kerja.', bv).passed).toBe(true);
+    const invented = ReplyPolicyEvaluator.postCheckReply('Bisa kak, cuma Rp 900.000 aja!', bv);
+    expect(invented.passed).toBe(false);
+    expect(invented.violations[0]).toContain('tidak ada di Info Bisnis');
+  });
+
   test('Invariant 7: Rule prefilter mendeteksi ancaman dan judi online', async () => {
     const threatCheck = RulePrefilter.check('Awas ya toko penipu besok gw samperin bawa preman!');
     expect(threatCheck.hasRisk).toBe(true);

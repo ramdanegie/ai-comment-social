@@ -6,7 +6,34 @@ export interface BrandVoiceConfig {
   useEmoji: boolean;
   cta: string;
   forbiddenPhrases: string[];
+  /** Business facts the AI may quote (prices, lead times, how to order, location, hours). */
+  knowledge?: string;
+  /** Up to 5 ideal replies written by the brand — style examples, not templates. */
+  examples?: string[];
 }
+
+export const KNOWLEDGE_MAX = 3000;
+export const EXAMPLES_MAX = 5;
+
+/** Brand voice from stored/submitted JSON with defaults and size caps (prompt budget). */
+export function normalizeBrandVoice(raw: unknown, fallbackName: string): BrandVoiceConfig {
+  const bv = (raw && typeof raw === 'object' ? raw : { tone: raw }) as Record<string, any>;
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  return {
+    brandName: bv.brandName || fallbackName,
+    tone: bv.tone || 'Ramah dan profesional',
+    useEmoji: bv.useEmoji ?? true,
+    cta: bv.cta || bv.defaultCta || '',
+    forbiddenPhrases: strings(bv.forbiddenPhrases),
+    knowledge: typeof bv.knowledge === 'string' ? bv.knowledge.slice(0, KNOWLEDGE_MAX) : '',
+    examples: strings(bv.examples)
+      .map((e) => e.trim().slice(0, 300))
+      .filter(Boolean)
+      .slice(0, EXAMPLES_MAX)
+  };
+}
+
+const digitsOf = (s: string) => s.replace(/[^0-9]/g, '');
 
 export interface ReplyPolicyEntity {
   mode: 'shadow' | 'assisted' | 'auto';
@@ -110,9 +137,14 @@ export class ReplyPolicyEvaluator {
       }
     }
 
-    // 2. Prohibited exact price commitments
-    if (/(rp\.?\s?[0-9]{3,}|ribu|juta|\b[0-9]{2,3}k\b)/i.test(replyText)) {
-      violations.push('Menyebut angka harga spesifik di komentar publik');
+    // 2. Prices only when they come from the brand's own Info Bisnis (no invented numbers).
+    const knownNumbers = new Set(((brandVoice.knowledge ?? '').match(/[0-9][0-9.,]*/g) ?? []).map(digitsOf));
+    const priceTokens = replyText.match(/rp\.?\s?[0-9][0-9.,]*(\s?(rb|ribu|jt|juta|k))?|\b[0-9][0-9.,]*\s?(rb|ribu|jt|juta|k)\b/gi) ?? [];
+    for (const token of priceTokens) {
+      const d = digitsOf(token);
+      if (!d || !knownNumbers.has(d)) {
+        violations.push(`Menyebut harga "${token.trim()}" yang tidak ada di Info Bisnis`);
+      }
     }
 
     // 3. External raw links

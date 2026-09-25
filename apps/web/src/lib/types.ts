@@ -86,6 +86,10 @@ export interface BrandVoice {
   useEmoji: boolean;
   cta: string;
   forbiddenPhrases: string[];
+  /** Business facts the AI may quote: prices, lead times, how to order, location, hours. */
+  knowledge?: string;
+  /** Up to 5 ideal replies (style examples). */
+  examples?: string[];
 }
 
 export interface ReplyPolicy {
