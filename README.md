@@ -330,3 +330,6 @@ lalu restart worker.
 - `apps/server/.env` berisi App Secret → jangan commit, jangan kirim lewat chat.
 - Token Meta di database selalu terenkripsi; API tidak pernah mengembalikan `accessTokenEnc`.
 - Kalau App Secret atau token sempat bocor: App settings → Basic → **Reset** App secret, lalu perbarui `.env` dan ulangi `connect`.
+
+
+<!-- Security scan triggered at 2026-10-07 11:36:56 -->
